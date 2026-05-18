@@ -47,6 +47,15 @@ graph TD
 ### 🗣️ Unified Speech Canvas (Chat Playground)
 Interactive workspace feed with real-time audio players, speed controls ($0.5\times$ to $2.0\times$), language-specific options, and seamless model hot-swapping.
 
+### 🧩 Mathematically Bounded Split-Synthesis & WAVE Binary Concatenation Engine
+Allows the synthesis of scripts and prompts of any length. Long scripts are sliced at natural, punctuation-friendly boundaries into segments under 200 characters to bypass ONNX attention limits (preventing model broadcast failures like `1000 by 1485`). The backends run synthesis in parallel and dynamically recompile PCM WAV files by parsing and splicing their binary headers into a single lossless master `.wav` file.
+
+### 🔍 Multi-Version Custom Style Cache Scanning
+Upgraded path scanning engine that automatically detects custom cloned and blended speaker profiles across `supertonic3`, `supertonic2`, and `supertonic` directories, preventing style loading failures.
+
+### 🛡️ Active Voice Validation Safeguard
+Instantly checks and resets selected speaker IDs when hot-swapping engines (e.g. switching from Pocket's cloned voices to Kokoro's neural voices), preventing `400 Unknown Voice` mismatch errors.
+
 ### 📊 Telemetry Hardware HUD
 Built-in hardware utilization monitors. Track CPU and RAM consumption directly inside the Aura settings drawer in real-time, with global controls to instantly terminate offline services.
 
