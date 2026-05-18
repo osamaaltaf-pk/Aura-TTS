@@ -1797,6 +1797,18 @@
     let nextSentenceToFetch = 0;
     let accumulatedAudioChunks = [];
 
+    // Real-Time Streaming Audio Player State
+    let activeStreamAudioId = null;
+    let activeStreamQueue = [];
+    let activeStreamIndex = 0;
+    let activeStreamPlaying = false;
+    let activeStreamAudioElement = null;
+    let activeStreamDurations = [];
+    let activeStreamCleanSentences = [];
+    let activeStreamVoice = null;
+    let activeStreamLang = null;
+    let activeStreamFormat = null;
+
     function playSentenceBlob(blob) {
       return new Promise((resolve) => {
         if (!isGeneratingSpeech) {
@@ -1829,56 +1841,147 @@
       });
     }
 
-    async function startPlayLoop(cleanSentences, audioId, voice, lang, format) {
-      isPlayLoopRunning = true;
-      let currentPlayIndex = 0;
-      accumulatedAudioChunks = [];
+    async function playStreamChunk(index, offsetTime = 0) {
+      if (!isGeneratingSpeech || activeStreamAudioId === null) return;
 
-      while (currentPlayIndex < cleanSentences.length && isGeneratingSpeech) {
-        const item = playQueue.find(x => x.index === currentPlayIndex);
-        if (!item) {
-          // Wait a tiny bit for the next sentence chunk to be fetched
-          await new Promise(resolve => setTimeout(resolve, 50));
-          continue;
+      const audioId = activeStreamAudioId;
+      const cleanSentences = activeStreamCleanSentences;
+      const voice = activeStreamVoice;
+      const lang = activeStreamLang;
+      const format = activeStreamFormat;
+
+      if (index >= cleanSentences.length) {
+        // If we finished playing everything and synthesis wasn't cancelled, compile & save final combined WAV!
+        if (accumulatedAudioChunks.length > 0) {
+          try {
+            const finalBlob = await concatenateWavBlobs(accumulatedAudioChunks);
+
+            const audioItem = {
+              id: audioId,
+              voice: voice + " (" + activeBackend.toUpperCase() + ")",
+              timestamp: new Date().toLocaleTimeString(),
+              textPrefix: cleanSentences.join(" ").substring(0, 120) + (cleanSentences.join(" ").length > 120 ? "..." : ""),
+              format: format,
+              audioBlob: finalBlob,
+              audioUrl: URL.createObjectURL(finalBlob)
+            };
+
+            if (!activeChat.audios) activeChat.audios = [];
+            activeChat.audios.push(audioItem);
+
+            await db.saveChat(activeChat);
+
+            renderChatMessages();
+            showToast('Speech synthesized successfully!', 'success');
+          } catch (e) {
+            console.error("Failed to compile final WAV:", e);
+            showToast("Generation completed, but failed to compile final WAV", "warning");
+          } finally {
+            cleanupSpeechState();
+          }
         }
-
-        // Just accumulate chunks in background without playing them piece-by-piece
-        accumulatedAudioChunks.push(item.blob);
-        currentPlayIndex++;
+        return;
       }
 
-      isPlayLoopRunning = false;
+      activeStreamIndex = index;
 
-      // If we finished playing everything and synthesis wasn't cancelled, compile & save final combined WAV!
-      if (isGeneratingSpeech && accumulatedAudioChunks.length > 0) {
-        try {
-          const finalBlob = await concatenateWavBlobs(accumulatedAudioChunks);
-
-          const audioItem = {
-            id: audioId,
-            voice: voice + " (" + activeBackend.toUpperCase() + ")",
-            timestamp: new Date().toLocaleTimeString(),
-            textPrefix: cleanSentences.join(" ").substring(0, 120) + (cleanSentences.join(" ").length > 120 ? "..." : ""),
-            format: format,
-            audioBlob: finalBlob,
-            audioUrl: URL.createObjectURL(finalBlob)
-          };
-
-          if (!activeChat.audios) activeChat.audios = [];
-          activeChat.audios.push(audioItem);
-
-          await db.saveChat(activeChat);
-
-          renderChatMessages();
-          showToast('Speech synthesized successfully!', 'success');
-          toggleCardPlayback(audioItem.id, audioItem.audioUrl);
-        } catch (e) {
-          console.error("Failed to compile final WAV:", e);
-          showToast("Generation completed, but failed to compile final WAV", "warning");
-        } finally {
-          cleanupSpeechState();
-        }
+      // Find the chunk in playQueue
+      let item = playQueue.find(x => x.index === index);
+      while (!item && isGeneratingSpeech && activeStreamAudioId === audioId) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        item = playQueue.find(x => x.index === index);
       }
+
+      if (!isGeneratingSpeech || activeStreamAudioId !== audioId) return;
+
+      // Accumulate the chunk
+      accumulatedAudioChunks.push(item.blob);
+
+      const url = URL.createObjectURL(item.blob);
+      activeStreamAudioElement = new Audio(url);
+      activeStreamAudioElement.playbackRate = activeChat.speed || 1.0;
+
+      activeStreamAudioElement.onloadedmetadata = () => {
+        if (activeStreamAudioId !== audioId) return;
+        activeStreamDurations[index] = activeStreamAudioElement.duration;
+        if (offsetTime > 0) {
+          activeStreamAudioElement.currentTime = offsetTime;
+        }
+        updateStreamUIDisplays(audioId, cleanSentences);
+      };
+
+      activeStreamAudioElement.ontimeupdate = () => {
+        if (activeStreamAudioId !== audioId) return;
+        updateStreamUIDisplays(audioId, cleanSentences);
+      };
+
+      activeStreamAudioElement.onended = () => {
+        URL.revokeObjectURL(url);
+        activeStreamAudioElement = null;
+        playStreamChunk(index + 1);
+      };
+
+      activeStreamAudioElement.onerror = (e) => {
+        console.error("Stream chunk playback failed:", e);
+        URL.revokeObjectURL(url);
+        activeStreamAudioElement = null;
+        playStreamChunk(index + 1);
+      };
+
+      // Enable the timeline and play controls on the live placeholder card!
+      const btn = document.getElementById(`play-btn-${audioId}`);
+      if (btn) {
+        btn.style.pointerEvents = 'auto';
+        btn.style.opacity = '1';
+      }
+      const timeline = document.querySelector(`#wave-gen-${audioId} .mini-timeline`);
+      if (timeline) {
+        timeline.style.pointerEvents = 'auto';
+      }
+
+      if (activeStreamPlaying) {
+        activeStreamAudioElement.play().catch(err => {
+          console.warn("Audio play interrupted or failed:", err);
+        });
+        if (btn) btn.innerText = "❚❚";
+        
+        // Ensure wave animation is running
+        const waveContainer = document.getElementById(`wave-gen-${audioId}`);
+        if (waveContainer) waveContainer.classList.add('generating');
+      } else {
+        if (btn) btn.innerText = "▶";
+        
+        // Pause wave animation
+        const waveContainer = document.getElementById(`wave-gen-${audioId}`);
+        if (waveContainer) waveContainer.classList.remove('generating');
+      }
+    }
+
+    function updateStreamUIDisplays(audioId, cleanSentences) {
+      const fill = document.getElementById(`timeline-fill-${audioId}`);
+      const currentSpan = document.getElementById(`current-time-${audioId}`);
+      const durationSpan = document.getElementById(`duration-time-${audioId}`);
+
+      if (!activeStreamAudioElement) return;
+
+      // 1. Calculate cumulative current time
+      let cumulativeTime = 0;
+      for (let i = 0; i < activeStreamIndex; i++) {
+        cumulativeTime += (activeStreamDurations[i] || 0);
+      }
+      cumulativeTime += activeStreamAudioElement.currentTime;
+
+      // 2. Calculate cumulative total duration of loaded chunks
+      let totalDuration = 0;
+      for (let i = 0; i < cleanSentences.length; i++) {
+        totalDuration += (activeStreamDurations[i] || 0);
+      }
+
+      const ratio = totalDuration > 0 ? (cumulativeTime / totalDuration) : 0;
+
+      if (fill) fill.style.width = `${ratio * 100}%`;
+      if (currentSpan) currentSpan.innerText = formatTime(cumulativeTime);
+      if (durationSpan) durationSpan.innerText = formatTime(totalDuration);
     }
 
     function concatenateWavBlobs(blobs) {
@@ -1956,6 +2059,14 @@
         const blob = await response.blob();
         playQueue.push({ index: currentIdx, blob, text: sentenceText });
 
+        // Update real-time chunk visual progress counter
+        if (activeStreamAudioId !== null) {
+          const txtEl = document.getElementById(`ai-text-${activeStreamAudioId}`);
+          if (txtEl) {
+            txtEl.innerText = `Synthesizing speech in real-time... (${playQueue.length}/${cleanSentences.length} chunks)`;
+          }
+        }
+
         // Auto-fetch next sentence in parallel immediately!
         fetchNextSentence(cleanSentences, voice, lang, format);
       } catch (err) {
@@ -1975,6 +2086,22 @@
       isPlayLoopRunning = false;
       accumulatedAudioChunks = [];
       nextSentenceToFetch = 0;
+
+      if (activeStreamAudioElement) {
+        try {
+          activeStreamAudioElement.pause();
+        } catch (e) { }
+        activeStreamAudioElement = null;
+      }
+      activeStreamAudioId = null;
+      activeStreamQueue = [];
+      activeStreamIndex = 0;
+      activeStreamPlaying = false;
+      activeStreamDurations = [];
+      activeStreamCleanSentences = [];
+      activeStreamVoice = null;
+      activeStreamLang = null;
+      activeStreamFormat = null;
 
       if (currentAudioSource) {
         try {
@@ -2103,14 +2230,27 @@
         <div class="message-ai-wrapper">
           <div class="ai-avatar">🦙</div>
           <div class="ai-content">
-            <div class="ai-text">Synthesizing speech in real-time...</div>
+            <div class="ai-text" id="ai-text-${audioId}">Synthesizing speech in real-time... (0/${cleanSentences.length} chunks)</div>
+            
             <div class="voice-wave-container generating" id="wave-gen-${audioId}">
-              <div class="wave-bar"></div>
-              <div class="wave-bar"></div>
-              <div class="wave-bar"></div>
-              <div class="wave-bar"></div>
-              <div class="wave-bar"></div>
+              <div class="mini-player-deck">
+                <button class="mini-play-btn" id="play-btn-${audioId}" onclick="toggleCardPlayback('${audioId}')" style="pointer-events: none; opacity: 0.5;">▶</button>
+                <div class="mini-timeline-track">
+                  <div class="mini-timeline" onclick="seekCardPlayback('${audioId}', event)" style="pointer-events: none;">
+                    <div class="mini-timeline-fill" id="timeline-fill-${audioId}"></div>
+                  </div>
+                  <div class="mini-time-display">
+                    <span id="current-time-${audioId}">0:00</span>
+                    <span id="duration-time-${audioId}">0:00</span>
+                  </div>
+                </div>
+                <div class="mini-actions">
+                  <button class="mini-action-icon" id="download-btn-${audioId}" style="opacity: 0.5; pointer-events: none;" title="Download Audio">📥</button>
+                  <button class="mini-action-icon delete" id="delete-btn-${audioId}" style="opacity: 0.5; pointer-events: none;" title="Remove Audio">🗑️</button>
+                </div>
+              </div>
             </div>
+
           </div>
         </div>
       `;
@@ -2127,14 +2267,26 @@
 
       activeAbortController = new AbortController();
 
-      // Start background fetching & play queue loops!
+      // Initialize all real-time streaming state variables
+      activeStreamAudioId = audioId;
+      activeStreamQueue = [];
+      activeStreamIndex = 0;
+      activeStreamPlaying = true;
+      activeStreamAudioElement = null;
+      activeStreamDurations = new Array(cleanSentences.length).fill(0);
+      activeStreamCleanSentences = cleanSentences;
+      activeStreamVoice = voice;
+      activeStreamLang = lang;
+      activeStreamFormat = format;
+      accumulatedAudioChunks = [];
       nextSentenceToFetch = 0;
       playQueue = [];
 
       // Kickoff first sentence and pre-fetches in background
       fetchNextSentence(cleanSentences, voice, lang, format);
-      // Kickoff sequential play loop
-      startPlayLoop(cleanSentences, audioId, voice, lang, format);
+      
+      // Start streaming playback at index 0 immediately!
+      playStreamChunk(0);
     }
 
     // ==================== SPEAKER OVERLAY FLOATING DIALOGS ====================
@@ -2355,6 +2507,32 @@
       const fill = document.getElementById(`timeline-fill-${id}`);
       const currentSpan = document.getElementById(`current-time-${id}`);
 
+      // Handle active real-time streaming player toggle
+      if (isGeneratingSpeech && activeStreamAudioId === id) {
+        if (activeStreamPlaying) {
+          activeStreamPlaying = false;
+          if (activeStreamAudioElement) {
+            activeStreamAudioElement.pause();
+          }
+          if (btn) btn.innerText = "▶";
+          
+          // Pause wave animation
+          const waveContainer = document.getElementById(`wave-gen-${id}`);
+          if (waveContainer) waveContainer.classList.remove('generating');
+        } else {
+          activeStreamPlaying = true;
+          if (activeStreamAudioElement) {
+            activeStreamAudioElement.play().catch(e => console.warn(e));
+          }
+          if (btn) btn.innerText = "❚❚";
+          
+          // Play wave animation
+          const waveContainer = document.getElementById(`wave-gen-${id}`);
+          if (waveContainer) waveContainer.classList.add('generating');
+        }
+        return;
+      }
+
       if (activePlayAudio && activePlayAudioId === id) {
         if (activePlayAudio.paused) {
           activePlayAudio.play();
@@ -2391,6 +2569,50 @@
     }
 
     function seekCardPlayback(id, event) {
+      // Handle seeking on the active real-time stream!
+      if (isGeneratingSpeech && activeStreamAudioId === id) {
+        const timeline = event.currentTarget;
+        const rect = timeline.getBoundingClientRect();
+        const percent = (event.clientX - rect.left) / rect.width;
+
+        // Calculate total duration of loaded chunks
+        let totalDuration = 0;
+        for (let i = 0; i < activeStreamDurations.length; i++) {
+          totalDuration += (activeStreamDurations[i] || 0);
+        }
+
+        const targetTime = percent * totalDuration;
+
+        // Find which chunk targetTime falls into
+        let accumulated = 0;
+        let targetIndex = -1;
+        let chunkTime = 0;
+
+        for (let i = 0; i < activeStreamDurations.length; i++) {
+          const duration = activeStreamDurations[i] || 0;
+          if (targetTime >= accumulated && targetTime <= accumulated + duration) {
+            targetIndex = i;
+            chunkTime = targetTime - accumulated;
+            break;
+          }
+          accumulated += duration;
+        }
+
+        if (targetIndex !== -1) {
+          if (targetIndex === activeStreamIndex) {
+            if (activeStreamAudioElement) {
+              activeStreamAudioElement.currentTime = chunkTime;
+            }
+          } else {
+            if (activeStreamAudioElement) {
+              activeStreamAudioElement.pause();
+            }
+            playStreamChunk(targetIndex, chunkTime);
+          }
+        }
+        return;
+      }
+
       if (activePlayAudio && activePlayAudioId === id) {
         const timeline = event.currentTarget;
         const rect = timeline.getBoundingClientRect();
@@ -2400,6 +2622,11 @@
     }
 
     function stopCardPlaybacks() {
+      // If a real-time stream is generating, cancel it when starting a historical playback
+      if (isGeneratingSpeech) {
+        cancelSpeech();
+      }
+
       if (activePlayAudio) {
         activePlayAudio.pause();
         const oldBtn = document.getElementById(`play-btn-${activePlayAudioId}`);
