@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,28 +11,52 @@
     :root {
       --wave-anim-duration: 1.2s;
     }
-    
+
     /* Elegant Waveform Animation */
     @keyframes waveFluid {
-      0%, 100% { height: 6px; transform: translateY(0); }
-      50% { height: 26px; transform: translateY(-3px); }
+
+      0%,
+      100% {
+        height: 6px;
+        transform: translateY(0);
+      }
+
+      50% {
+        height: 26px;
+        transform: translateY(-3px);
+      }
     }
-    
+
     .voice-wave-container.generating .wave-bar {
       animation: waveFluid var(--wave-anim-duration) ease-in-out infinite;
       background: linear-gradient(135deg, var(--accent-color), var(--dot-green));
       border-radius: 4px;
       width: 4px;
     }
-    
-    .voice-wave-container.generating .wave-bar:nth-child(1) { animation-delay: 0.1s; }
-    .voice-wave-container.generating .wave-bar:nth-child(2) { animation-delay: 0.25s; }
-    .voice-wave-container.generating .wave-bar:nth-child(3) { animation-delay: 0.4s; }
-    .voice-wave-container.generating .wave-bar:nth-child(4) { animation-delay: 0.55s; }
-    .voice-wave-container.generating .wave-bar:nth-child(5) { animation-delay: 0.7s; }
+
+    .voice-wave-container.generating .wave-bar:nth-child(1) {
+      animation-delay: 0.1s;
+    }
+
+    .voice-wave-container.generating .wave-bar:nth-child(2) {
+      animation-delay: 0.25s;
+    }
+
+    .voice-wave-container.generating .wave-bar:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    .voice-wave-container.generating .wave-bar:nth-child(4) {
+      animation-delay: 0.55s;
+    }
+
+    .voice-wave-container.generating .wave-bar:nth-child(5) {
+      animation-delay: 0.7s;
+    }
 
     /* Glassmorphic Settings Bar for modes */
-    .batch-settings-bar, .cloning-settings-bar {
+    .batch-settings-bar,
+    .cloning-settings-bar {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
@@ -40,8 +65,9 @@
       margin-bottom: 20px;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
-    .dark-theme .batch-settings-bar, .dark-theme .cloning-settings-bar {
+
+    .dark-theme .batch-settings-bar,
+    .dark-theme .cloning-settings-bar {
       box-shadow: 0 4px 25px rgba(0, 0, 0, 0.2);
     }
 
@@ -57,11 +83,11 @@
       font-weight: 600;
       border: 1px solid var(--border-color);
     }
-    
+
     .dark-theme .status-badge-container {
       background: rgba(255, 255, 255, 0.04);
     }
-    
+
     .status-indicator-dot {
       width: 8px;
       height: 8px;
@@ -69,12 +95,12 @@
       background: var(--text-disabled);
       position: relative;
     }
-    
+
     .status-indicator-dot.active {
       background: #27c93f;
       box-shadow: 0 0 8px #27c93f;
     }
-    
+
     .status-indicator-dot.active::after {
       content: '';
       position: absolute;
@@ -84,42 +110,57 @@
       border-radius: 50%;
       animation: pulse-ring 1.5s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
     }
-    
+
     @keyframes pulse-ring {
-      0% { transform: scale(.33); opacity: 1; }
-      80%, 100% { transform: scale(2.2); opacity: 0; }
+      0% {
+        transform: scale(.33);
+        opacity: 1;
+      }
+
+      80%,
+      100% {
+        transform: scale(2.2);
+        opacity: 0;
+      }
     }
-    
+
     /* Elegant Hover Interactions */
     .btn-submit-pill {
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
     .btn-submit-pill:hover {
       transform: scale(1.05) translateY(-1px);
     }
+
     .btn-submit-pill:active {
       transform: scale(0.95);
     }
   </style>
 </head>
+
 <body>
   <div class="app-container">
-    
+
     <!-- LEFT SIDEBAR: CHAT HISTORY & MODES -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div style="display: flex; align-items: center; gap: 10px;">
           <!-- macOS-style Dots representing modes -->
           <div class="window-dots">
-            <div class="dot dot-red active" id="dot-chat" onclick="switchAppMode('chat')" data-title="Chat Playground (Red)"></div>
-            <div class="dot dot-yellow" id="dot-batch" onclick="switchAppMode('batch')" data-title="Batch Importer (Yellow)"></div>
-            <div class="dot dot-green" id="dot-cloning" onclick="switchAppMode('cloning')" data-title="Voice Cloning (Green)"></div>
+            <div class="dot dot-red active" id="dot-chat" onclick="switchAppMode('chat')"
+              data-title="Chat Playground (Red)"></div>
+            <div class="dot dot-yellow" id="dot-batch" onclick="switchAppMode('batch')"
+              data-title="Batch Importer (Yellow)"></div>
+            <div class="dot dot-green" id="dot-cloning" onclick="switchAppMode('cloning')"
+              data-title="Voice Cloning (Green)"></div>
           </div>
-          
+
           <!-- Black-and-white theme toggle icon in left upper corner -->
-          <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">◐</button>
+          <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()"
+            title="Toggle Dark/Light Mode">◐</button>
         </div>
-        
+
         <!-- Toggle button to collapse sidebar -->
         <button class="btn-sidebar-toggle" id="left-toggle" onclick="toggleSidebar()" title="Collapse chats">
           📑
@@ -133,7 +174,8 @@
         </button>
         <div class="sidebar-search-wrapper">
           <span class="sidebar-search-icon">🔍</span>
-          <input type="text" class="sidebar-search-input" id="chat-search" placeholder="Search chats..." oninput="filterChats()">
+          <input type="text" class="sidebar-search-input" id="chat-search" placeholder="Search chats..."
+            oninput="filterChats()">
         </div>
       </div>
 
@@ -154,15 +196,17 @@
 
     <!-- CENTRAL Speach Canvas Workspace -->
     <main class="chat-workspace">
-      
+
       <!-- Top header -->
       <header class="chat-header">
         <div style="display: flex; align-items: center; gap: 12px;">
           <!-- Restore sidebar button -->
-          <button class="btn-sidebar-toggle" id="sidebar-restore-btn" onclick="toggleSidebar()" style="display: none;" title="Open chats">
+          <button class="btn-sidebar-toggle" id="sidebar-restore-btn" onclick="toggleSidebar()" style="display: none;"
+            title="Open chats">
             📑
           </button>
-          <h2 style="font-family: var(--font-title); font-weight: 700; font-size: 1.1rem; color: var(--text-primary);" id="chat-title-header">
+          <h2 style="font-family: var(--font-title); font-weight: 700; font-size: 1.1rem; color: var(--text-primary);"
+            id="chat-title-header">
             Workspace Chat
           </h2>
         </div>
@@ -186,7 +230,8 @@
         <div class="ollama-placeholder" id="feed-placeholder">
           <div class="llama-icon">🦙</div>
           <h2>Aura Local TTS</h2>
-          <p>Synthesize ultra-high fidelity speech locally offline.<br>Select your speech engine and enter your text below to begin.</p>
+          <p>Synthesize ultra-high fidelity speech locally offline.<br>Select your speech engine and enter your text
+            below to begin.</p>
         </div>
 
         <!-- Rendered dynamically -->
@@ -197,13 +242,17 @@
       <div class="submit-container" id="chat-submit-footer">
         <div class="submit-pill">
           <!-- Text Input area -->
-          <textarea class="submit-textarea" id="submit-text-input" placeholder="Send a message (Enter to generate, Shift+Enter for new line)..." onkeydown="handleInputKeydown(event)" oninput="autoResizeTextarea(this)"></textarea>
-          
+          <textarea class="submit-textarea" id="submit-text-input"
+            placeholder="Send a message (Enter to generate, Shift+Enter for new line)..."
+            onkeydown="handleInputKeydown(event)" oninput="autoResizeTextarea(this)"></textarea>
+
           <div class="submit-controls">
-            
+
             <!-- Speaker selector trigger -->
-            <div class="speaker-selector-wrapper" style="position: relative; display: inline-flex; align-items: center;">
-              <button class="btn-speaker-trigger" id="speaker-select-btn" onclick="toggleSpeakerPopup(event)" type="button" title="Select Speaker Style">
+            <div class="speaker-selector-wrapper"
+              style="position: relative; display: inline-flex; align-items: center;">
+              <button class="btn-speaker-trigger" id="speaker-select-btn" onclick="toggleSpeakerPopup(event)"
+                type="button" title="Select Speaker Style">
                 🗣️
               </button>
               <!-- Speaker popup overlay dialog -->
@@ -249,14 +298,15 @@
       <div class="batch-workspace" id="batch-screen">
         <div class="cloning-card-header" style="border: none; padding: 0; margin-bottom: 5px;">
           <h2 style="font-family: var(--font-title); font-size: 1.4rem;">Batch Speech Generation</h2>
-          <p style="color: var(--text-secondary);">Drop spreadsheets or text script files to synthesize multiple rows sequentially.</p>
+          <p style="color: var(--text-secondary);">Drop spreadsheets or text script files to synthesize multiple rows
+            sequentially.</p>
         </div>
 
         <!-- BATCH MODE OWN SELECTION & SETTINGS PILL -->
         <div class="batch-settings-bar">
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
             <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary);">Config Engine:</span>
-            
+
             <!-- Batch Mode Model Dropdown -->
             <select class="model-pill-select" id="batch-engine-select" onchange="triggerEngineSwitch('batch')">
               <option value="kokoro">kokoro</option>
@@ -280,8 +330,10 @@
             </select>
 
             <!-- Batch Mode Speaker Select popup -->
-            <div class="speaker-selector-wrapper" style="position: relative; display: inline-flex; align-items: center;">
-              <button class="btn-speaker-trigger" id="batch-speaker-btn" onclick="toggleBatchSpeakerPopup(event)" type="button" title="Select Batch Speaker">
+            <div class="speaker-selector-wrapper"
+              style="position: relative; display: inline-flex; align-items: center;">
+              <button class="btn-speaker-trigger" id="batch-speaker-btn" onclick="toggleBatchSpeakerPopup(event)"
+                type="button" title="Select Batch Speaker">
                 🗣️
               </button>
               <div class="speaker-overlay-popup" id="batch-speaker-overlay" onclick="event.stopPropagation()">
@@ -295,20 +347,25 @@
         <!-- Drag zone -->
         <div class="batch-dropzone" id="batch-dropzone" onclick="document.getElementById('batch-file-picker').click()">
           <i>📂</i>
-          <span id="batch-drop-text" style="font-weight: 600; font-size: 0.95rem;">Drag & drop spreadsheet (.csv) or text files (.txt) here</span>
-          <p style="font-size: 0.75rem; color: var(--text-disabled); margin-top: 5px;">or click to browse local storage</p>
-          <input type="file" id="batch-file-picker" accept=".txt,.csv" style="display: none;" onchange="handleBatchFileSelect(event)">
+          <span id="batch-drop-text" style="font-weight: 600; font-size: 0.95rem;">Drag & drop spreadsheet (.csv) or
+            text files (.txt) here</span>
+          <p style="font-size: 0.75rem; color: var(--text-disabled); margin-top: 5px;">or click to browse local storage
+          </p>
+          <input type="file" id="batch-file-picker" accept=".txt,.csv" style="display: none;"
+            onchange="handleBatchFileSelect(event)">
         </div>
 
         <div class="batch-results-list" id="batch-results-panel" style="display: none;">
           <div class="batch-results-title" id="batch-status-title">Parsed Rows (0)</div>
           <div id="batch-items-rows-container"></div>
-          
+
           <div style="display: flex; gap: 15px; margin-top: 20px;">
-            <button class="new-chat-btn" id="btn-process-batch" onclick="processBatchTTS()" style="background: var(--dot-yellow); color: #000; font-weight: 700; text-align: center; justify-content: center; height: 42px;">
+            <button class="new-chat-btn" id="btn-process-batch" onclick="processBatchTTS()"
+              style="background: var(--dot-yellow); color: #000; font-weight: 700; text-align: center; justify-content: center; height: 42px;">
               ⚡ Start Batch Synthesis
             </button>
-            <button class="new-chat-btn" onclick="clearBatchQueue()" style="background: rgba(0,0,0,0.03); color: var(--text-primary); width: auto;">
+            <button class="new-chat-btn" onclick="clearBatchQueue()"
+              style="background: rgba(0,0,0,0.03); color: var(--text-primary); width: auto;">
               Clear Queue
             </button>
           </div>
@@ -317,7 +374,7 @@
 
       <!-- VIEW 3: VOICE CLONING WORKSPACE -->
       <div class="cloning-workspace" id="cloning-screen">
-        
+
         <!-- CLONING MODE OWN MODEL SELECTOR PILL -->
         <div class="cloning-settings-bar" style="margin-bottom: 25px;">
           <div style="display: flex; align-items: center; gap: 12px;">
@@ -333,16 +390,18 @@
         <!-- Zero-Shot Cloning Alert Overlay if Kokoro loaded -->
         <div class="cloning-alert-screen" id="cloning-disabled-screen" style="display: none;">
           <i>⚠️</i>
-          <h2 style="font-family: var(--font-title); font-weight: 700; font-size: 1.5rem; color: var(--text-primary);">Zero-Shot Cloning Disabled</h2>
+          <h2 style="font-family: var(--font-title); font-weight: 700; font-size: 1.5rem; color: var(--text-primary);">
+            Zero-Shot Cloning Disabled</h2>
           <p style="max-width: 480px; font-size: 0.85rem; line-height: 1.5; margin-top: 6px;">
-            Kokoro TTS uses unified static matrices that do not support Dynamic Timbre Cloning. 
-            Please select **Pocket TTS** or **Supertonic** from the dropdown above to unlock zero-shot dynamic cloned speakers!
+            Kokoro TTS uses unified static matrices that do not support Dynamic Timbre Cloning.
+            Please select **Pocket TTS** or **Supertonic** from the dropdown above to unlock zero-shot dynamic cloned
+            speakers!
           </p>
         </div>
 
         <!-- Dynamic Cloner Grid if supported -->
         <div class="cloning-grid" id="cloning-active-grid">
-          
+
           <!-- Cloner Card A: Voice Cloning via Reference Audio (Pocket TTS specific) -->
           <div class="cloning-card" id="cloning-pocket-card">
             <div class="cloning-card-header">
@@ -357,10 +416,12 @@
 
             <div class="form-group">
               <label>Reference Audio Clip</label>
-              <div class="drag-voice-audio-zone" id="cloning-drag-zone" onclick="document.getElementById('cloning-audio-picker').click()">
+              <div class="drag-voice-audio-zone" id="cloning-drag-zone"
+                onclick="document.getElementById('cloning-audio-picker').click()">
                 <i>📤</i>
                 <span id="cloning-drag-text">Drop reference audio (MP3, WAV, OGG)</span>
-                <input type="file" id="cloning-audio-picker" accept=".mp3,.wav,.ogg,.flac" style="display: none;" onchange="handleCloningAudioSelect(event)">
+                <input type="file" id="cloning-audio-picker" accept=".mp3,.wav,.ogg,.flac" style="display: none;"
+                  onchange="handleCloningAudioSelect(event)">
               </div>
             </div>
 
@@ -380,7 +441,8 @@
               </select>
             </div>
 
-            <button class="new-chat-btn" onclick="uploadVoiceCloningPrompt()" style="background: var(--dot-green); color: #000; font-weight: 700; justify-content: center; height: 42px;">
+            <button class="new-chat-btn" onclick="uploadVoiceCloningPrompt()"
+              style="background: var(--dot-green); color: #000; font-weight: 700; justify-content: center; height: 42px;">
               🎙️ Clone Voice Prompt
             </button>
           </div>
@@ -412,7 +474,8 @@
                 <span id="mix-percent-a" style="color: var(--dot-red);">Voice A (50%)</span>
                 <span id="mix-percent-b" style="color: var(--dot-green);">Voice B (50%)</span>
               </div>
-              <input type="range" class="blend-slider-track" id="mix-ratio-slider" min="0" max="100" value="50" oninput="updateBlendPercentages(this.value)">
+              <input type="range" class="blend-slider-track" id="mix-ratio-slider" min="0" max="100" value="50"
+                oninput="updateBlendPercentages(this.value)">
             </div>
 
             <div class="form-group">
@@ -420,7 +483,8 @@
               <input type="text" class="form-control" id="mix-voice-name" placeholder="e.g. Mixed_Style">
             </div>
 
-            <button class="new-chat-btn" onclick="mixSupertonicVoices()" style="background: var(--dot-green); color: #000; font-weight: 700; justify-content: center; height: 42px;">
+            <button class="new-chat-btn" onclick="mixSupertonicVoices()"
+              style="background: var(--dot-green); color: #000; font-weight: 700; justify-content: center; height: 42px;">
               ✨ Interpolate & Blend
             </button>
           </div>
@@ -436,12 +500,16 @@
                 <span style="color: var(--text-disabled); font-size: 0.75rem;">No custom styles mixed yet.</span>
               </div>
             </div>
-            
-            <div class="cloning-card" id="json-profile-card" style="display: none; padding: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('json-file-picker').click()">
+
+            <div class="cloning-card" id="json-profile-card"
+              style="display: none; padding: 20px; text-align: center; cursor: pointer;"
+              onclick="document.getElementById('json-file-picker').click()">
               <i style="font-size: 1.5rem; color: var(--dot-green); display: block; margin-bottom: 5px;">📤</i>
               <span style="font-size: 0.8rem; font-weight: 600;">Import JSON Profile</span>
-              <p style="font-size: 0.7rem; color: var(--text-disabled); margin-top: 2px;">Upload style exported from Supertonic</p>
-              <input type="file" id="json-file-picker" accept=".json" style="display: none;" onchange="uploadVoiceProfile(event)">
+              <p style="font-size: 0.7rem; color: var(--text-disabled); margin-top: 2px;">Upload style exported from
+                Supertonic</p>
+              <input type="file" id="json-file-picker" accept=".json" style="display: none;"
+                onchange="uploadVoiceProfile(event)">
             </div>
           </div>
 
@@ -456,16 +524,21 @@
     <div class="settings-dialog" id="settings-dialog">
       <div class="settings-nav">
         <h3>⚙️ Settings</h3>
-        <button class="settings-nav-btn active" onclick="showSettingsTab('settings-general')" id="tab-settings-general">🔧 Profile Settings</button>
-        <button class="settings-nav-btn" onclick="showSettingsTab('settings-network')" id="tab-settings-network">🌐 LAN API Sharing</button>
-        <button class="settings-nav-btn" onclick="showSettingsTab('settings-telemetry')" id="tab-settings-telemetry">📊 Telemetry HUD</button>
-        <button class="settings-nav-btn" onclick="showSettingsTab('settings-logs')" id="tab-settings-logs">📁 Global Logs</button>
-        
-        <button class="new-chat-btn" onclick="toggleSettingsModal(false)" style="margin-top: auto; justify-content: center; height: 35px; background: rgba(0,0,0,0.03);">Done</button>
+        <button class="settings-nav-btn active" onclick="showSettingsTab('settings-general')"
+          id="tab-settings-general">🔧 Profile Settings</button>
+        <button class="settings-nav-btn" onclick="showSettingsTab('settings-network')" id="tab-settings-network">🌐 LAN
+          API Sharing</button>
+        <button class="settings-nav-btn" onclick="showSettingsTab('settings-telemetry')" id="tab-settings-telemetry">📊
+          Telemetry HUD</button>
+        <button class="settings-nav-btn" onclick="showSettingsTab('settings-logs')" id="tab-settings-logs">📁 Global
+          Logs</button>
+
+        <button class="new-chat-btn" onclick="toggleSettingsModal(false)"
+          style="margin-top: auto; justify-content: center; height: 35px; background: rgba(0,0,0,0.03);">Done</button>
       </div>
 
       <div class="settings-body">
-        
+
         <!-- Tab 1: Profile -->
         <div class="settings-panel active" id="settings-general">
           <div class="cloning-card-header" style="border: none; padding: 0; margin-bottom: 20px;">
@@ -474,14 +547,18 @@
           </div>
           <div class="form-group">
             <label for="settings-username">Creator Username</label>
-            <input type="text" class="form-control" id="settings-username" value="Aura Creator" oninput="updateProfileName(this.value)">
+            <input type="text" class="form-control" id="settings-username" value="Aura Creator"
+              oninput="updateProfileName(this.value)">
           </div>
           <div class="form-group" style="margin-top: 25px;">
             <label>Cache Database Space Size</label>
-            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 6px;">All custom script text and generated binary audio Blobs are sandboxed locally.</p>
-            <span class="mode-badge chat" id="db-storage-size" style="background: rgba(0,0,0,0.04); color: var(--text-primary); border: 1px solid var(--border-color); font-size: 0.75rem; display: inline-block;">Calculating...</span>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 6px;">All custom script text and
+              generated binary audio Blobs are sandboxed locally.</p>
+            <span class="mode-badge chat" id="db-storage-size"
+              style="background: rgba(0,0,0,0.04); color: var(--text-primary); border: 1px solid var(--border-color); font-size: 0.75rem; display: inline-block;">Calculating...</span>
           </div>
-          <button class="new-chat-btn" onclick="nukeIndexedDatabase()" style="background: var(--danger); color: #fff; font-weight: 700; justify-content: center; width: auto; height: 38px; margin-top: 20px;">
+          <button class="new-chat-btn" onclick="nukeIndexedDatabase()"
+            style="background: var(--danger); color: #fff; font-weight: 700; justify-content: center; width: auto; height: 38px; margin-top: 20px;">
             🛑 Nuke Cache & Reset
           </button>
         </div>
@@ -494,27 +571,32 @@
           </div>
           <div class="form-group">
             <label>Host LAN addresses</label>
-            <span class="mode-badge batch" id="host-lan-ip" style="background: rgba(39, 201, 63, 0.1); color: var(--dot-green); border: 1px solid rgba(39,201,63,0.2); font-size: 0.8rem; font-family: monospace; display: inline-block;">127.0.0.1:5000</span>
-            <p style="font-size: 0.7rem; color: var(--text-disabled); margin-top: 5px;">Use this IP address inside scripts running on other devices connected to the same Wi-Fi network.</p>
+            <span class="mode-badge batch" id="host-lan-ip"
+              style="background: rgba(39, 201, 63, 0.1); color: var(--dot-green); border: 1px solid rgba(39,201,63,0.2); font-size: 0.8rem; font-family: monospace; display: inline-block;">127.0.0.1:5000</span>
+            <p style="font-size: 0.7rem; color: var(--text-disabled); margin-top: 5px;">Use this IP address inside
+              scripts running on other devices connected to the same Wi-Fi network.</p>
           </div>
 
           <div class="form-group">
             <label>Python Network Script Example</label>
             <div class="copy-code-block" id="py-network-snippet">
-              <button class="chat-action-btn" onclick="copyPythonCode()" style="position: absolute; right: 10px; top: 10px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; font-size: 0.65rem;">Copy</button>import requests
+              <button class="chat-action-btn" onclick="copyPythonCode()"
+                style="position: absolute; right: 10px; top: 10px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; font-size: 0.65rem;">Copy</button>import
+              requests
 
-url = "http://<span id="py-ip-ref">127.0.0.1</span>:5000/api/tts"
-payload = {
-    "text": "Greetings from the local network!",
-    "voice": "af_sarah",
-    "speed": 1.0
-}
-res = requests.post(url, json=payload)
-with open("lan_synthesis.wav", "wb") as f:
-    f.write(res.content)
+              url = "http://<span id="py-ip-ref">127.0.0.1</span>:5000/api/tts"
+              payload = {
+              "text": "Greetings from the local network!",
+              "voice": "af_sarah",
+              "speed": 1.0
+              }
+              res = requests.post(url, json=payload)
+              with open("lan_synthesis.wav", "wb") as f:
+              f.write(res.content)
             </div>
           </div>
-          <a href="http://localhost:5000/docs" target="_blank" style="font-size: 0.75rem; color: var(--dot-green); text-decoration: none; font-weight: 600;">
+          <a href="http://localhost:5000/docs" target="_blank"
+            style="font-size: 0.75rem; color: var(--dot-green); text-decoration: none; font-weight: 600;">
             📖 Open Local Swagger Documentation & OpenAPI Playground UI ↗
           </a>
         </div>
@@ -535,7 +617,8 @@ with open("lan_synthesis.wav", "wb") as f:
               <div class="val" id="ram-usage-settings">0%</div>
             </div>
           </div>
-          <button class="new-chat-btn" onclick="stopAllServices()" style="background: rgba(217, 45, 32, 0.1); color: var(--danger); border: 1px solid rgba(217, 45, 32, 0.2); font-weight: 700; height: 38px; margin-top: 15px;">
+          <button class="new-chat-btn" onclick="stopAllServices()"
+            style="background: rgba(217, 45, 32, 0.1); color: var(--danger); border: 1px solid rgba(217, 45, 32, 0.2); font-weight: 700; height: 38px; margin-top: 15px;">
             🛑 Shut Down All Speech Servers
           </button>
         </div>
@@ -546,7 +629,7 @@ with open("lan_synthesis.wav", "wb") as f:
             <h4 style="font-family: var(--font-title); font-size: 1.1rem;">Global Log Audit</h4>
             <p>Review every speech synthesized across all project chats.</p>
           </div>
-          
+
           <div class="batch-results-list" style="max-height: 260px; padding: 0;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.7rem; text-align: left;">
               <thead>
@@ -578,26 +661,26 @@ with open("lan_synthesis.wav", "wb") as f:
     let loadingEngine = null;
     let localHostIp = "127.0.0.1";
     let activeAppMode = "chat"; // 'chat', 'batch', 'cloning'
-    
+
     // Project and Chat arrays
     let chats = [];
     let activeChat = null;
-    
+
     let batchProjects = [];
     let activeBatchProject = null;
-    
+
     let customVoices = [];
     let activeCustomVoice = null;
-    
+
     // Per-mode model/voice configurations
     let chatActiveModel = "kokoro";
     let chatSelectedVoiceId = "";
-    
+
     let batchActiveModel = "kokoro";
     let batchSelectedVoiceId = "";
-    
+
     let cloningActiveModel = "kokoro";
-    
+
     // Global lists
     let availableVoices = [];
 
@@ -750,14 +833,14 @@ with open("lan_synthesis.wav", "wb") as f:
       const container = document.getElementById('toast-container');
       const toast = document.createElement('div');
       toast.className = `toast-item ${type}`;
-      
+
       let icon = 'ℹ️';
       if (type === 'success') icon = '✅';
       if (type === 'error') icon = '❌';
-      
+
       toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
       container.appendChild(toast);
-      
+
       setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(100%)';
@@ -770,7 +853,7 @@ with open("lan_synthesis.wav", "wb") as f:
       document.body.classList.toggle('dark-theme');
       const isDark = document.body.classList.contains('dark-theme');
       localStorage.setItem('aura_theme', isDark ? 'dark' : 'light');
-      
+
       const btn = document.getElementById('theme-toggle-btn');
       if (isDark) {
         btn.innerHTML = '◑';
@@ -785,9 +868,9 @@ with open("lan_synthesis.wav", "wb") as f:
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebar');
       const restoreBtn = document.getElementById('sidebar-restore-btn');
-      
+
       sidebar.classList.toggle('collapsed');
-      
+
       if (sidebar.classList.contains('collapsed')) {
         restoreBtn.style.display = '';
       } else {
@@ -799,34 +882,34 @@ with open("lan_synthesis.wav", "wb") as f:
     function switchAppMode(mode) {
       activeAppMode = mode;
       localStorage.setItem('aura_active_app_mode', mode);
-      
+
       // Update Dot Highlights
       document.querySelectorAll('.dot').forEach(el => el.classList.remove('active'));
       document.getElementById(`dot-${mode}`).classList.add('active');
-      
+
       // Update badge
       const badge = document.getElementById('active-mode-badge');
       if (badge) {
         badge.className = `mode-badge ${mode}`;
         badge.innerText = `${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode`;
       }
-      
+
       // Toggle View Displays
       const chatFeed = document.getElementById('chat-feed-screen');
       const chatSubmit = document.getElementById('chat-submit-footer');
       const batchScreen = document.getElementById('batch-screen');
       const cloningScreen = document.getElementById('cloning-screen');
-      
+
       // Sidebar Swapping Elements
       const sidebarBtn = document.getElementById('sidebar-new-action-btn');
       const searchInput = document.getElementById('chat-search');
-      
+
       if (mode === 'chat') {
         if (chatFeed) chatFeed.style.display = 'flex';
         if (chatSubmit) chatSubmit.style.display = 'block';
         if (batchScreen) batchScreen.classList.remove('active');
         if (cloningScreen) cloningScreen.classList.remove('active');
-        
+
         if (sidebarBtn) {
           sidebarBtn.innerHTML = '<i>📝</i> New Chat';
           sidebarBtn.onclick = createNewChat;
@@ -835,7 +918,7 @@ with open("lan_synthesis.wav", "wb") as f:
           searchInput.placeholder = 'Search chats...';
           searchInput.oninput = filterChats;
         }
-        
+
         renderChatsList();
         if (activeChat) {
           selectActiveChat(activeChat.id);
@@ -848,7 +931,7 @@ with open("lan_synthesis.wav", "wb") as f:
         if (batchScreen) batchScreen.classList.add('active');
         if (cloningScreen) cloningScreen.classList.remove('active');
         stopCardPlaybacks();
-        
+
         if (sidebarBtn) {
           sidebarBtn.innerHTML = '<i>📦</i> New Project';
           sidebarBtn.onclick = createNewBatchProject;
@@ -857,7 +940,7 @@ with open("lan_synthesis.wav", "wb") as f:
           searchInput.placeholder = 'Search projects...';
           searchInput.oninput = filterBatchProjects;
         }
-        
+
         renderBatchProjectsList();
         if (activeBatchProject) {
           selectActiveBatchProject(activeBatchProject.id);
@@ -870,7 +953,7 @@ with open("lan_synthesis.wav", "wb") as f:
         if (batchScreen) batchScreen.classList.remove('active');
         if (cloningScreen) cloningScreen.classList.add('active');
         stopCardPlaybacks();
-        
+
         if (sidebarBtn) {
           sidebarBtn.innerHTML = '<i>🎙️</i> New Custom Voice';
           sidebarBtn.onclick = openNewVoiceModal;
@@ -879,7 +962,7 @@ with open("lan_synthesis.wav", "wb") as f:
           searchInput.placeholder = 'Search voices...';
           searchInput.oninput = filterCustomVoices;
         }
-        
+
         renderCustomVoicesList();
         syncCloningUIVisibility();
       }
@@ -897,10 +980,10 @@ with open("lan_synthesis.wav", "wb") as f:
         format: "wav",
         rows: []
       };
-      
+
       batchProjects.push(newObj);
       await db.saveBatchProject(newObj);
-      
+
       renderBatchProjectsList();
       await selectActiveBatchProject(id);
       showToast(`Created Batch Project: ${newObj.title}`, 'success');
@@ -910,18 +993,18 @@ with open("lan_synthesis.wav", "wb") as f:
       const list = document.getElementById('chats-list');
       if (!list) return;
       list.innerHTML = '';
-      
+
       const query = document.getElementById('chat-search').value.toLowerCase().trim();
-      
+
       batchProjects.forEach(bp => {
         if (query && !bp.title.toLowerCase().includes(query)) return;
-        
+
         const item = document.createElement('div');
         item.className = `chat-item ${activeBatchProject && activeBatchProject.id === bp.id ? 'active' : ''}`;
         item.id = `batch-proj-item-${bp.id}`;
         item.onclick = () => selectActiveBatchProject(bp.id);
         item.ondblclick = (e) => startRenameBatchProject(bp.id, e);
-        
+
         item.innerHTML = `
           <div class="chat-item-details">
             <i>📦</i>
@@ -938,26 +1021,26 @@ with open("lan_synthesis.wav", "wb") as f:
 
     async function selectActiveBatchProject(id) {
       stopCardPlaybacks();
-      
+
       const active = batchProjects.find(bp => bp.id === id);
       if (!active) return;
-      
+
       activeBatchProject = active;
       localStorage.setItem('aura_active_batch_id', id);
-      
+
       document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
       const activeItem = document.getElementById(`batch-proj-item-${id}`);
       if (activeItem) activeItem.classList.add('active');
-      
+
       // Update engine dropdowns & language selections
       const engineSel = document.getElementById('batch-engine-select');
       const langSel = document.getElementById('batch-lang-select');
       if (engineSel && active.engine) engineSel.value = active.engine;
       if (langSel && active.lang) langSel.value = active.lang;
-      
+
       // Re-trigger voices fetch based on new selection
       await fetchVoices();
-      
+
       // Render the row level view
       renderBatchRows();
     }
@@ -968,18 +1051,18 @@ with open("lan_synthesis.wav", "wb") as f:
       if (!item) return;
       const titleSpan = item.querySelector('.chat-item-title');
       const currentVal = titleSpan.innerText;
-      
+
       titleSpan.style.display = 'none';
-      
+
       const input = document.createElement('input');
       input.type = 'text';
       input.className = 'chat-item-input';
       input.value = currentVal;
-      
+
       item.querySelector('.chat-item-details').appendChild(input);
       input.focus();
       input.select();
-      
+
       const commitTitle = async () => {
         const val = input.value.trim();
         if (val && val !== currentVal) {
@@ -993,7 +1076,7 @@ with open("lan_synthesis.wav", "wb") as f:
         input.remove();
         titleSpan.style.display = '';
       };
-      
+
       input.onblur = commitTitle;
       input.onkeydown = (e) => {
         if (e.key === 'Enter') commitTitle();
@@ -1006,17 +1089,17 @@ with open("lan_synthesis.wav", "wb") as f:
 
     async function deleteBatchProjectWorkspace(id, event) {
       if (event) event.stopPropagation();
-      
+
       if (!confirm("Are you sure you want to permanently delete this batch project?")) return;
-      
+
       // Stop background processing jobs for this specific project if running
       if (activeBatchBgJobs && activeBatchBgJobs[id]) {
         delete activeBatchBgJobs[id];
       }
-      
+
       batchProjects = batchProjects.filter(bp => bp.id !== id);
       await db.deleteBatchProject(id);
-      
+
       if (activeBatchProject && activeBatchProject.id === id) {
         activeBatchProject = batchProjects[0] || null;
         if (activeBatchProject) {
@@ -1025,7 +1108,7 @@ with open("lan_synthesis.wav", "wb") as f:
           localStorage.removeItem('aura_active_batch_id');
         }
       }
-      
+
       renderBatchProjectsList();
       if (activeBatchProject) {
         selectActiveBatchProject(activeBatchProject.id);
@@ -1045,16 +1128,16 @@ with open("lan_synthesis.wav", "wb") as f:
       const list = document.getElementById('chats-list');
       if (!list) return;
       list.innerHTML = '';
-      
+
       const query = document.getElementById('chat-search').value.toLowerCase().trim();
-      
+
       // 1. Divider for Cloned / Registered voices
       const customTitle = document.createElement('div');
       customTitle.className = 'sidebar-section-header';
       customTitle.style.cssText = "font-size: 0.75rem; font-weight: 800; color: var(--accent-color); padding: 12px 10px 4px 10px; text-transform: uppercase; letter-spacing: 0.05em;";
       customTitle.innerText = "Custom Speaker Timbres";
       list.appendChild(customTitle);
-      
+
       const customMatches = customVoices.filter(cv => !query || cv.name.toLowerCase().includes(query));
       if (customMatches.length === 0) {
         const noVal = document.createElement('div');
@@ -1068,7 +1151,7 @@ with open("lan_synthesis.wav", "wb") as f:
           item.id = `custom-voice-item-${cv.id}`;
           item.onclick = () => selectActiveCustomVoice(cv.id);
           item.ondblclick = (e) => startRenameCustomVoice(cv.id, e);
-          
+
           let icon = cv.type === 'mixed' ? '✨' : '🎙️';
           item.innerHTML = `
             <div class="chat-item-details">
@@ -1083,14 +1166,14 @@ with open("lan_synthesis.wav", "wb") as f:
           list.appendChild(item);
         });
       }
-      
+
       // 2. Divider for Standard / Built-in voices
       const builtinTitle = document.createElement('div');
       builtinTitle.className = 'sidebar-section-header';
       builtinTitle.style.cssText = "font-size: 0.75rem; font-weight: 800; color: var(--text-secondary); padding: 16px 10px 4px 10px; text-transform: uppercase; letter-spacing: 0.05em;";
       builtinTitle.innerText = "Built-in / Preset Voices";
       list.appendChild(builtinTitle);
-      
+
       const builtinMatches = availableVoices.filter(v => !v.cloned && (!query || v.name.toLowerCase().includes(query)));
       if (builtinMatches.length === 0) {
         const noVal = document.createElement('div');
@@ -1124,20 +1207,20 @@ with open("lan_synthesis.wav", "wb") as f:
     function selectActiveCustomVoice(id) {
       const active = customVoices.find(cv => cv.id === id);
       if (!active) return;
-      
+
       activeCustomVoice = active;
       localStorage.setItem('aura_active_voice_id', id);
-      
+
       document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
       const activeItem = document.getElementById(`custom-voice-item-${id}`);
       if (activeItem) activeItem.classList.add('active');
-      
+
       // Populate Cloning inputs based on chosen voice parameters
       const renameInput = document.getElementById('clone-speaker-name');
       const mixRenameInput = document.getElementById('mix-voice-name');
       if (renameInput) renameInput.value = active.name;
       if (mixRenameInput) mixRenameInput.value = active.name;
-      
+
       if (active.type === 'mixed') {
         const mixA = document.getElementById('mix-voice-a');
         const mixB = document.getElementById('mix-voice-b');
@@ -1149,7 +1232,7 @@ with open("lan_synthesis.wav", "wb") as f:
           updateBlendPercentages(slider.value);
         }
       }
-      
+
       showToast(`Selected Registered Voice Style: ${active.name}`, 'info');
     }
 
@@ -1159,18 +1242,18 @@ with open("lan_synthesis.wav", "wb") as f:
       if (!item) return;
       const titleSpan = item.querySelector('.chat-item-title');
       const currentVal = titleSpan.innerText;
-      
+
       titleSpan.style.display = 'none';
-      
+
       const input = document.createElement('input');
       input.type = 'text';
       input.className = 'chat-item-input';
       input.value = currentVal;
-      
+
       item.querySelector('.chat-item-details').appendChild(input);
       input.focus();
       input.select();
-      
+
       const commitTitle = async () => {
         const val = input.value.trim();
         if (val && val !== currentVal) {
@@ -1184,7 +1267,7 @@ with open("lan_synthesis.wav", "wb") as f:
         input.remove();
         titleSpan.style.display = '';
       };
-      
+
       input.onblur = commitTitle;
       input.onkeydown = (e) => {
         if (e.key === 'Enter') commitTitle();
@@ -1197,12 +1280,12 @@ with open("lan_synthesis.wav", "wb") as f:
 
     async function deleteCustomVoiceWorkspace(id, event) {
       if (event) event.stopPropagation();
-      
+
       if (!confirm("Are you sure you want to permanently delete this custom speaker timbre?")) return;
-      
+
       customVoices = customVoices.filter(cv => cv.id !== id);
       await db.deleteVoice(id);
-      
+
       if (activeCustomVoice && activeCustomVoice.id === id) {
         activeCustomVoice = customVoices[0] || null;
         if (activeCustomVoice) {
@@ -1211,7 +1294,7 @@ with open("lan_synthesis.wav", "wb") as f:
           localStorage.removeItem('aura_active_voice_id');
         }
       }
-      
+
       renderCustomVoicesList();
       showToast("Custom speaker timbre deleted", "info");
     }
@@ -1222,11 +1305,11 @@ with open("lan_synthesis.wav", "wb") as f:
       const mixName = document.getElementById('mix-voice-name');
       if (name) name.value = '';
       if (mixName) mixName.value = '';
-      
+
       activeCustomVoice = null;
       localStorage.removeItem('aura_active_voice_id');
       document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
-      
+
       showToast("Form cleared! Enter parameters on the right to build a new Custom Voice style.", "info");
     }
 
@@ -1235,7 +1318,7 @@ with open("lan_synthesis.wav", "wb") as f:
     }
 
     // ==================== WORKSPACE BOOTSTRAPPING ====================
-    
+
     async function loadWorkspace() {
       // Restore Light/Dark theme setting
       const savedTheme = localStorage.getItem('aura_theme') || 'light';
@@ -1256,7 +1339,7 @@ with open("lan_synthesis.wav", "wb") as f:
 
       try {
         await db.init();
-        
+
         // 1. Load Chats
         chats = await db.getChats();
         chats.forEach(c => {
@@ -1266,7 +1349,7 @@ with open("lan_synthesis.wav", "wb") as f:
             }
           });
         });
-        
+
         // 2. Load Batch Projects
         batchProjects = await db.getBatchProjects();
         batchProjects.forEach(bp => {
@@ -1278,32 +1361,32 @@ with open("lan_synthesis.wav", "wb") as f:
             });
           }
         });
-        
+
         // 3. Load Custom Voices
         customVoices = await db.getVoices();
-        
+
         // 4. Restore Mode & Active Item selections
         const savedMode = localStorage.getItem('aura_active_app_mode') || 'chat';
-        
+
         if (chats.length > 0) {
           const lastChatId = localStorage.getItem('aura_active_chat_id') || chats[0].id;
           let activeC = chats.find(c => c.id === lastChatId) || chats[0];
           activeChat = activeC;
           await selectActiveChat(activeC.id);
         }
-        
+
         if (batchProjects.length > 0) {
           const lastBatchId = localStorage.getItem('aura_active_batch_id') || batchProjects[0].id;
           activeBatchProject = batchProjects.find(bp => bp.id === lastBatchId) || batchProjects[0];
         }
-        
+
         if (customVoices.length > 0) {
           const lastVoiceId = localStorage.getItem('aura_active_voice_id') || customVoices[0].id;
           activeCustomVoice = customVoices.find(v => v.id === lastVoiceId) || customVoices[0];
         }
-        
+
         switchAppMode(savedMode);
-        
+
         // Profile Name check
         const profile = localStorage.getItem('aura_username') || "Aura Creator";
         updateProfileName(profile, false);
@@ -1316,18 +1399,18 @@ with open("lan_synthesis.wav", "wb") as f:
     function renderChatsList() {
       const list = document.getElementById('chats-list');
       list.innerHTML = '';
-      
+
       const query = document.getElementById('chat-search').value.toLowerCase().trim();
-      
+
       chats.forEach(c => {
         if (query && !c.title.toLowerCase().includes(query)) return;
-        
+
         const item = document.createElement('div');
         item.className = `chat-item ${activeChat && activeChat.id === c.id ? 'active' : ''}`;
         item.id = `chat-item-${c.id}`;
         item.onclick = () => selectActiveChat(c.id);
         item.ondblclick = (e) => startRenameChat(c.id, e);
-        
+
         item.innerHTML = `
           <div class="chat-item-details">
             <i>💬</i>
@@ -1345,56 +1428,56 @@ with open("lan_synthesis.wav", "wb") as f:
     // Load active Chat and populate fields
     async function selectActiveChat(id) {
       stopCardPlaybacks();
-      
+
       const active = chats.find(c => c.id === id);
       if (!active) return;
-      
+
       activeChat = active;
       localStorage.setItem('aura_active_chat_id', id);
-      
+
       document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
       const activeItem = document.getElementById(`chat-item-${id}`);
       if (activeItem) activeItem.classList.add('active');
-      
+
       document.getElementById('chat-title-header').innerText = active.title;
       document.getElementById('submit-text-input').value = active.text;
-      
+
       if (active.lang) {
         document.getElementById('lang-select').value = active.lang;
         document.getElementById('batch-lang-select').value = active.lang;
       }
-      
+
       // Select correct engines in dropdowns
       const savedEngine = active.engine || "kokoro";
       chatActiveModel = savedEngine;
       batchActiveModel = savedEngine;
       cloningActiveModel = savedEngine;
-      
+
       document.getElementById('compact-engine-select').value = savedEngine;
       document.getElementById('batch-engine-select').value = savedEngine;
       document.getElementById('cloning-engine-select').value = savedEngine;
-      
+
       await fetchVoices();
-      
+
       if (active.voice) {
         chatSelectedVoiceId = active.voice;
         batchSelectedVoiceId = active.voice;
         updateSelectedVoiceDisplay('chat');
         updateSelectedVoiceDisplay('batch');
       }
-      
+
       renderChatMessages();
     }
 
     // Save active chat configuration changes on-the-fly
     async function saveActiveChatSettings() {
       if (!activeChat) return;
-      
+
       activeChat.text = document.getElementById('submit-text-input').value;
       activeChat.voice = chatSelectedVoiceId;
       activeChat.engine = chatActiveModel;
       activeChat.lang = document.getElementById('lang-select').value;
-      
+
       await db.saveChat(activeChat);
     }
 
@@ -1412,14 +1495,14 @@ with open("lan_synthesis.wav", "wb") as f:
         format: "wav",
         audios: []
       };
-      
+
       chats.push(newObj);
       await db.saveChat(newObj);
-      
+
       renderChatsList();
       await selectActiveChat(id);
       showToast(`Created chat ${newObj.title}`, 'success');
-      
+
       document.getElementById('submit-text-input').focus();
     }
 
@@ -1429,18 +1512,18 @@ with open("lan_synthesis.wav", "wb") as f:
       const item = document.getElementById(`chat-item-${id}`);
       const titleSpan = item.querySelector('.chat-item-title');
       const currentVal = titleSpan.innerText;
-      
+
       titleSpan.style.display = 'none';
-      
+
       const input = document.createElement('input');
       input.type = 'text';
       input.className = 'chat-item-input';
       input.value = currentVal;
-      
+
       item.querySelector('.chat-item-details').appendChild(input);
       input.focus();
       input.select();
-      
+
       const commitTitle = async () => {
         const val = input.value.trim();
         if (val && val !== currentVal) {
@@ -1455,7 +1538,7 @@ with open("lan_synthesis.wav", "wb") as f:
         input.remove();
         titleSpan.style.display = '';
       };
-      
+
       input.onblur = commitTitle;
       input.onkeydown = (e) => {
         if (e.key === 'Enter') commitTitle();
@@ -1469,24 +1552,24 @@ with open("lan_synthesis.wav", "wb") as f:
     // Delete a Chat session
     async function deleteChatWorkspace(id, event) {
       if (event) event.stopPropagation();
-      
+
       if (chats.length <= 1) {
         showToast("Cannot delete the only remaining chat workspace session", "error");
         return;
       }
-      
+
       if (!confirm("Are you sure you want to permanently delete this chat session?")) return;
-      
+
       await db.deleteChat(id);
-      
+
       const target = chats.find(c => c.id === id);
       target.audios.forEach(item => {
         if (item.audioUrl) URL.revokeObjectURL(item.audioUrl);
       });
-      
+
       chats = chats.filter(c => c.id !== id);
       renderChatsList();
-      
+
       if (activeChat && activeChat.id === id) {
         await selectActiveChat(chats[0].id);
       }
@@ -1503,26 +1586,26 @@ with open("lan_synthesis.wav", "wb") as f:
     function renderChatMessages() {
       const placeholder = document.getElementById('feed-placeholder');
       const feed = document.getElementById('messages-list-wrapper');
-      
+
       feed.innerHTML = '';
-      
+
       if (!activeChat || !activeChat.audios || activeChat.audios.length === 0) {
         placeholder.style.display = 'flex';
         return;
       }
-      
+
       placeholder.style.display = 'none';
-      
+
       activeChat.audios.forEach(audio => {
         const userBubble = document.createElement('div');
         userBubble.className = 'message-bubble user';
         userBubble.innerHTML = `<div class="message-user-tag">${audio.textPrefix}</div>`;
         feed.appendChild(userBubble);
-        
+
         const aiBubble = document.createElement('div');
         aiBubble.className = 'message-bubble ai';
         aiBubble.id = `ai-msg-${audio.id}`;
-        
+
         aiBubble.innerHTML = `
           <div class="message-ai-wrapper">
             <div class="ai-avatar">🦙</div>
@@ -1553,14 +1636,14 @@ with open("lan_synthesis.wav", "wb") as f:
           </div>
         `;
         feed.appendChild(aiBubble);
-        
+
         const temp = new Audio(audio.audioUrl);
         temp.onloadedmetadata = () => {
           const durationSpan = document.getElementById(`duration-time-${audio.id}`);
           if (durationSpan) durationSpan.innerText = formatTime(temp.duration);
         };
       });
-      
+
       scrollToBottom();
       renderGlobalSettingsLogs();
     }
@@ -1576,10 +1659,10 @@ with open("lan_synthesis.wav", "wb") as f:
       try {
         const response = await fetch('/api/status');
         const data = await response.json();
-        
+
         document.getElementById('cpu-usage-settings').innerText = `${data.system.cpu}%`;
         document.getElementById('ram-usage-settings').innerText = `${data.system.ram}%`;
-        
+
         if (data.system.local_ip && localHostIp !== data.system.local_ip) {
           localHostIp = data.system.local_ip;
           document.getElementById('host-lan-ip').innerText = `${localHostIp}:5000`;
@@ -1596,18 +1679,18 @@ with open("lan_synthesis.wav", "wb") as f:
           dot.classList.remove('active');
           text.innerText = "OFFLINE";
         }
-        
+
         // Sync active state engine
         if (data.active_backend !== activeBackend) {
           activeBackend = data.active_backend;
-          
+
           const langSelect = document.getElementById('lang-select');
           const batchLangSelect = document.getElementById('batch-lang-select');
-          
+
           // Language selection dropdowns are always visible for filtering across all engines
           langSelect.style.display = '';
           batchLangSelect.style.display = '';
-          
+
           fetchVoices();
           syncCloningUIVisibility();
         }
@@ -1629,26 +1712,30 @@ with open("lan_synthesis.wav", "wb") as f:
         targetEngine = document.getElementById('cloning-engine-select').value;
         cloningActiveModel = targetEngine;
       }
-      
+
       // Update other mode dropdowns to maintain visual alignment
       document.getElementById('compact-engine-select').value = targetEngine;
       document.getElementById('batch-engine-select').value = targetEngine;
       document.getElementById('cloning-engine-select').value = targetEngine;
-      
-      if (activeBackend === targetEngine) return;
-      
+
+      const isSystemOffline = document.getElementById('system-status-text').innerText === "OFFLINE";
+      if (activeBackend === targetEngine && !isSystemOffline) return;
+
       showToast(`Loading speech engine ${targetEngine.toUpperCase()} locally offline...`, 'info');
-      
+
       try {
         const response = await fetch('/api/switch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ backend: targetEngine })
         });
-        
+
         if (response.ok) {
           showToast(`Engine ${targetEngine.toUpperCase()} loaded and ready!`, 'success');
           
+          // Set activeBackend immediately to prevent race conditions during checks
+          activeBackend = targetEngine;
+
           // Save engine preference to active chat object
           if (activeChat) {
             activeChat.engine = targetEngine;
@@ -1716,24 +1803,24 @@ with open("lan_synthesis.wav", "wb") as f:
           resolve();
           return;
         }
-        
+
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
         currentAudioSource = audio;
-        
+
         audio.onended = () => {
           URL.revokeObjectURL(audioUrl);
           currentAudioSource = null;
           resolve();
         };
-        
+
         audio.onerror = (e) => {
           console.error("Audio playback error:", e);
           URL.revokeObjectURL(audioUrl);
           currentAudioSource = null;
           resolve();
         };
-        
+
         audio.play().catch(err => {
           console.warn("Audio play interrupted or failed:", err);
           currentAudioSource = null;
@@ -1746,7 +1833,7 @@ with open("lan_synthesis.wav", "wb") as f:
       isPlayLoopRunning = true;
       let currentPlayIndex = 0;
       accumulatedAudioChunks = [];
-      
+
       while (currentPlayIndex < cleanSentences.length && isGeneratingSpeech) {
         const item = playQueue.find(x => x.index === currentPlayIndex);
         if (!item) {
@@ -1754,21 +1841,19 @@ with open("lan_synthesis.wav", "wb") as f:
           await new Promise(resolve => setTimeout(resolve, 50));
           continue;
         }
-        
-        // Play this sentence chunk!
-        await playSentenceBlob(item.blob);
-        
+
+        // Just accumulate chunks in background without playing them piece-by-piece
         accumulatedAudioChunks.push(item.blob);
         currentPlayIndex++;
       }
-      
+
       isPlayLoopRunning = false;
-      
+
       // If we finished playing everything and synthesis wasn't cancelled, compile & save final combined WAV!
       if (isGeneratingSpeech && accumulatedAudioChunks.length > 0) {
         try {
           const finalBlob = await concatenateWavBlobs(accumulatedAudioChunks);
-          
+
           const audioItem = {
             id: audioId,
             voice: voice + " (" + activeBackend.toUpperCase() + ")",
@@ -1778,12 +1863,12 @@ with open("lan_synthesis.wav", "wb") as f:
             audioBlob: finalBlob,
             audioUrl: URL.createObjectURL(finalBlob)
           };
-          
+
           if (!activeChat.audios) activeChat.audios = [];
           activeChat.audios.push(audioItem);
-          
+
           await db.saveChat(activeChat);
-          
+
           renderChatMessages();
           showToast('Speech synthesized successfully!', 'success');
           toggleCardPlayback(audioItem.id, audioItem.audioUrl);
@@ -1805,7 +1890,7 @@ with open("lan_synthesis.wav", "wb") as f:
             r.readAsArrayBuffer(b);
           });
         });
-        
+
         Promise.all(readers).then((buffers) => {
           if (buffers.length === 0) {
             resolve(new Blob());
@@ -1815,11 +1900,11 @@ with open("lan_synthesis.wav", "wb") as f:
             resolve(new Blob([buffers[0]], { type: 'audio/wav' }));
             return;
           }
-          
+
           const masterHeader = buffers[0].subarray(0, 44);
           const pcmChunks = [];
           let totalPcmLength = 0;
-          
+
           for (let i = 0; i < buffers.length; i++) {
             if (buffers[i].length > 44) {
               const pcm = buffers[i].subarray(44);
@@ -1827,22 +1912,22 @@ with open("lan_synthesis.wav", "wb") as f:
               totalPcmLength += pcm.length;
             }
           }
-          
+
           const totalWavLength = 44 + totalPcmLength;
           const finalWavBytes = new Uint8Array(totalWavLength);
-          
+
           finalWavBytes.set(masterHeader, 0);
-          
+
           let offset = 44;
           for (const chunk of pcmChunks) {
             finalWavBytes.set(chunk, offset);
             offset += chunk.length;
           }
-          
+
           const view = new DataView(finalWavBytes.buffer);
           view.setUint32(4, totalWavLength - 8, true);
           view.setUint32(40, totalPcmLength, true);
-          
+
           resolve(new Blob([finalWavBytes], { type: 'audio/wav' }));
         });
       });
@@ -1852,10 +1937,10 @@ with open("lan_synthesis.wav", "wb") as f:
       if (nextSentenceToFetch >= cleanSentences.length || !isGeneratingSpeech) {
         return;
       }
-      
+
       const currentIdx = nextSentenceToFetch++;
       const sentenceText = cleanSentences[currentIdx];
-      
+
       try {
         const response = await fetch('/api/tts', {
           method: 'POST',
@@ -1863,14 +1948,14 @@ with open("lan_synthesis.wav", "wb") as f:
           body: JSON.stringify({ text: sentenceText, voice, speed: activeChat.speed, lang, format }),
           signal: activeAbortController.signal
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const blob = await response.blob();
         playQueue.push({ index: currentIdx, blob, text: sentenceText });
-        
+
         // Auto-fetch next sentence in parallel immediately!
         fetchNextSentence(cleanSentences, voice, lang, format);
       } catch (err) {
@@ -1890,14 +1975,14 @@ with open("lan_synthesis.wav", "wb") as f:
       isPlayLoopRunning = false;
       accumulatedAudioChunks = [];
       nextSentenceToFetch = 0;
-      
+
       if (currentAudioSource) {
         try {
           currentAudioSource.pause();
-        } catch (e) {}
+        } catch (e) { }
         currentAudioSource = null;
       }
-      
+
       const btn = document.getElementById('btn-submit');
       if (btn) {
         btn.disabled = false;
@@ -1908,13 +1993,13 @@ with open("lan_synthesis.wav", "wb") as f:
 
     function cancelSpeech() {
       if (!isGeneratingSpeech) return;
-      
+
       if (activeAbortController) {
         activeAbortController.abort();
       }
-      
+
       cleanupSpeechState();
-      
+
       if (currentAiBubbleId) {
         const bubble = document.getElementById(currentAiBubbleId);
         if (bubble) {
@@ -1925,7 +2010,7 @@ with open("lan_synthesis.wav", "wb") as f:
           bubble.classList.remove('loading');
         }
       }
-      
+
       showToast("Speech generation cancelled", "info");
     }
 
@@ -1937,32 +2022,32 @@ with open("lan_synthesis.wav", "wb") as f:
 
       const textInput = document.getElementById('submit-text-input');
       const text = textInput.value.trim();
-      const format = 'wav'; 
+      const format = 'wav';
       const lang = document.getElementById('lang-select').value;
       const btn = document.getElementById('btn-submit');
-      
+
       if (!text) {
         showToast("Please enter a script text prompt to synthesize!", "error");
         return;
       }
-      
+
       // Split sentences cleanly
       const sentences = text.match(/[^.!?。！？\n]+[.!?。！？\n]*|\n+/g) || [text];
       const cleanSentences = sentences.map(s => s.trim()).filter(s => s.length > 0);
-      
+
       if (cleanSentences.length === 0) {
         showToast("Please enter a valid text prompt!", "error");
         return;
       }
-      
+
       // Transparent Auto-Boot
       if (!activeBackend) {
         const chosenEngine = document.getElementById('compact-engine-select').value;
         showToast(`Auto-booting speech engine ${chosenEngine.toUpperCase()} offline...`, 'info');
-        
+
         btn.disabled = true;
         btn.innerHTML = '⏳';
-        
+
         try {
           const response = await fetch('/api/switch', {
             method: 'POST',
@@ -1990,30 +2075,30 @@ with open("lan_synthesis.wav", "wb") as f:
           btn.innerHTML = '↑';
         }
       }
-      
+
       const voice = chatSelectedVoiceId || (availableVoices.length > 0 ? availableVoices[0].id : null);
       if (!voice) {
         showToast("Please select a speaker voice style first!", "error");
         toggleSpeakerPopup();
         return;
       }
-      
+
       const audioId = `audio-${Date.now()}`;
       currentAiBubbleId = `ai-msg-${audioId}`;
-      
+
       const feed = document.getElementById('messages-list-wrapper');
       const placeholder = document.getElementById('feed-placeholder');
       placeholder.style.display = 'none';
-      
+
       const userBubble = document.createElement('div');
       userBubble.className = 'message-bubble user';
       userBubble.innerHTML = `<div class="message-user-tag">${text}</div>`;
       feed.appendChild(userBubble);
-      
+
       const aiBubble = document.createElement('div');
       aiBubble.className = 'message-bubble ai loading';
       aiBubble.id = currentAiBubbleId;
-      
+
       aiBubble.innerHTML = `
         <div class="message-ai-wrapper">
           <div class="ai-avatar">🦙</div>
@@ -2031,21 +2116,21 @@ with open("lan_synthesis.wav", "wb") as f:
       `;
       feed.appendChild(aiBubble);
       scrollToBottom();
-      
+
       textInput.value = '';
       textInput.style.height = '24px';
-      
+
       isGeneratingSpeech = true;
       btn.disabled = false;
       btn.innerHTML = '■';
       btn.classList.add('generating');
-      
+
       activeAbortController = new AbortController();
-      
+
       // Start background fetching & play queue loops!
       nextSentenceToFetch = 0;
       playQueue = [];
-      
+
       // Kickoff first sentence and pre-fetches in background
       fetchNextSentence(cleanSentences, voice, lang, format);
       // Kickoff sequential play loop
@@ -2058,7 +2143,7 @@ with open("lan_synthesis.wav", "wb") as f:
       if (event) event.stopPropagation();
       const popup = document.getElementById('speaker-overlay');
       popup.classList.toggle('active');
-      
+
       // Close batch popup
       const batchPopup = document.getElementById('batch-speaker-overlay');
       if (batchPopup) batchPopup.classList.remove('active');
@@ -2068,7 +2153,7 @@ with open("lan_synthesis.wav", "wb") as f:
       if (event) event.stopPropagation();
       const popup = document.getElementById('batch-speaker-overlay');
       popup.classList.toggle('active');
-      
+
       // Close chat popup
       const chatPopup = document.getElementById('speaker-overlay');
       if (chatPopup) chatPopup.classList.remove('active');
@@ -2084,20 +2169,20 @@ with open("lan_synthesis.wav", "wb") as f:
     async function fetchVoices() {
       const list = document.getElementById('speaker-popup-list');
       const batchList = document.getElementById('batch-speaker-popup-list');
-      
+
       list.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">Loading...</span>';
       batchList.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">Loading...</span>';
-      
+
       try {
         const response = await fetch('/api/voices');
         const data = await response.json();
-        
+
         if (data.voices && data.voices.length > 0) {
           availableVoices = data.voices;
         } else {
           availableVoices = [];
         }
-        
+
         // Dynamic Integration: Merge custom voices from IndexedDB matching activeBackend!
         if (db) {
           try {
@@ -2111,7 +2196,7 @@ with open("lan_synthesis.wav", "wb") as f:
                 language: 'all',
                 cloned: true
               }));
-              
+
             const voiceIds = new Set(availableVoices.map(x => x.id));
             matchingCustom.forEach(cv => {
               if (!voiceIds.has(cv.id)) {
@@ -2122,14 +2207,17 @@ with open("lan_synthesis.wav", "wb") as f:
             console.error("Failed to merge custom DB voices:", eDb);
           }
         }
-        
+
         if (availableVoices.length > 0) {
-          // Setup active defaults if not set
-          if (!chatSelectedVoiceId) {
+          // Safeguard: Automatically reset active defaults if previous selection is invalid for the new engine
+          const voiceIds = new Set(availableVoices.map(x => x.id));
+          if (!chatSelectedVoiceId || !voiceIds.has(chatSelectedVoiceId)) {
             chatSelectedVoiceId = availableVoices[0].id;
+          }
+          if (!batchSelectedVoiceId || !voiceIds.has(batchSelectedVoiceId)) {
             batchSelectedVoiceId = availableVoices[0].id;
           }
-          
+
           renderVoices();
           populateMixerDropdowns(availableVoices);
         } else {
@@ -2145,25 +2233,25 @@ with open("lan_synthesis.wav", "wb") as f:
     function renderVoices() {
       const list = document.getElementById('speaker-popup-list');
       const batchList = document.getElementById('batch-speaker-popup-list');
-      
+
       if (!availableVoices || availableVoices.length === 0) {
         list.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">No voices</span>';
         batchList.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">No voices</span>';
         return;
       }
-      
+
       const chatLang = document.getElementById('lang-select').value;
       const batchLang = document.getElementById('batch-lang-select').value;
-      
+
       list.innerHTML = '';
       batchList.innerHTML = '';
-      
+
       // Filter Chat voices (allow 'all' and match chat selection)
       const filteredChatVoices = availableVoices.filter(v => v.language === 'all' || v.language === chatLang);
       filteredChatVoices.forEach(voice => {
         const item = document.createElement('div');
         item.className = `speaker-popup-item ${chatSelectedVoiceId === voice.id ? 'active' : ''}`;
-        
+
         let badgesHtml = '';
         if (voice.cloned) {
           badgesHtml += `<span class="voice-badge cloned-badge">CLONED</span>`;
@@ -2171,12 +2259,12 @@ with open("lan_synthesis.wav", "wb") as f:
         if (voice.language && voice.language !== 'all') {
           badgesHtml += `<span class="voice-badge lang-badge">${voice.language.toUpperCase()}</span>`;
         }
-        
+
         item.innerHTML = `
           <span class="voice-name-text">${voice.name} (${voice.gender.charAt(0).toUpperCase()})</span>
           <div class="voice-badges-container">${badgesHtml}</div>
         `;
-        
+
         item.onclick = (e) => {
           e.stopPropagation();
           chatSelectedVoiceId = voice.id;
@@ -2186,17 +2274,17 @@ with open("lan_synthesis.wav", "wb") as f:
         };
         list.appendChild(item);
       });
-      
+
       if (filteredChatVoices.length === 0) {
         list.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.75rem; padding: 12px 10px; display: block; text-align: center;">No voices for selected language</span>';
       }
-      
+
       // Filter Batch voices
       const filteredBatchVoices = availableVoices.filter(v => v.language === 'all' || v.language === batchLang);
       filteredBatchVoices.forEach(voice => {
         const batchItem = document.createElement('div');
         batchItem.className = `speaker-popup-item ${batchSelectedVoiceId === voice.id ? 'active' : ''}`;
-        
+
         let badgesHtml = '';
         if (voice.cloned) {
           badgesHtml += `<span class="voice-badge cloned-badge">CLONED</span>`;
@@ -2204,12 +2292,12 @@ with open("lan_synthesis.wav", "wb") as f:
         if (voice.language && voice.language !== 'all') {
           badgesHtml += `<span class="voice-badge lang-badge">${voice.language.toUpperCase()}</span>`;
         }
-        
+
         batchItem.innerHTML = `
           <span class="voice-name-text">${voice.name} (${voice.gender.charAt(0).toUpperCase()})</span>
           <div class="voice-badges-container">${badgesHtml}</div>
         `;
-        
+
         batchItem.onclick = (e) => {
           e.stopPropagation();
           batchSelectedVoiceId = voice.id;
@@ -2218,23 +2306,23 @@ with open("lan_synthesis.wav", "wb") as f:
         };
         batchList.appendChild(batchItem);
       });
-      
+
       if (filteredBatchVoices.length === 0) {
         batchList.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.75rem; padding: 12px 10px; display: block; text-align: center;">No voices for selected language</span>';
       }
-      
+
       // Automatic fallback if selected voice doesn't match selected language
       const activeChatVoice = filteredChatVoices.find(v => v.id === chatSelectedVoiceId);
       if (!activeChatVoice && filteredChatVoices.length > 0) {
         chatSelectedVoiceId = filteredChatVoices[0].id;
         saveActiveChatSettings();
       }
-      
+
       const activeBatchVoice = filteredBatchVoices.find(v => v.id === batchSelectedVoiceId);
       if (!activeBatchVoice && filteredBatchVoices.length > 0) {
         batchSelectedVoiceId = filteredBatchVoices[0].id;
       }
-      
+
       updateSelectedVoiceDisplay('chat');
       updateSelectedVoiceDisplay('batch');
     }
@@ -2266,7 +2354,7 @@ with open("lan_synthesis.wav", "wb") as f:
       const btn = document.getElementById(`play-btn-${id}`);
       const fill = document.getElementById(`timeline-fill-${id}`);
       const currentSpan = document.getElementById(`current-time-${id}`);
-      
+
       if (activePlayAudio && activePlayAudioId === id) {
         if (activePlayAudio.paused) {
           activePlayAudio.play();
@@ -2277,22 +2365,22 @@ with open("lan_synthesis.wav", "wb") as f:
         }
         return;
       }
-      
+
       stopCardPlaybacks();
-      
+
       activePlayAudio = new Audio(url);
       activePlayAudioId = id;
       btn.innerText = "❚❚";
-      
+
       activePlayAudio.play();
-      
+
       activePlayAudio.ontimeupdate = () => {
         if (!activePlayAudio) return;
         const ratio = activePlayAudio.currentTime / activePlayAudio.duration;
         if (fill) fill.style.width = `${ratio * 100}%`;
         if (currentSpan) currentSpan.innerText = formatTime(activePlayAudio.currentTime);
       };
-      
+
       activePlayAudio.onended = () => {
         btn.innerText = "▶";
         if (fill) fill.style.width = "0%";
@@ -2317,11 +2405,11 @@ with open("lan_synthesis.wav", "wb") as f:
         const oldBtn = document.getElementById(`play-btn-${activePlayAudioId}`);
         const oldFill = document.getElementById(`timeline-fill-${activePlayAudioId}`);
         const oldSpan = document.getElementById(`current-time-${activePlayAudioId}`);
-        
+
         if (oldBtn) oldBtn.innerText = "▶";
         if (oldFill) oldFill.style.width = "0%";
         if (oldSpan) oldSpan.innerText = "0:00";
-        
+
         activePlayAudio = null;
         activePlayAudioId = null;
       }
@@ -2330,7 +2418,7 @@ with open("lan_synthesis.wav", "wb") as f:
     function downloadHistoryAudio(id) {
       const audio = activeChat.audios.find(a => a.id === id);
       if (!audio) return;
-      
+
       const link = document.createElement('a');
       link.href = audio.audioUrl;
       link.download = `aura_${activeChat.title.toLowerCase().replace(/ /g, "_")}_speech.${audio.format}`;
@@ -2342,17 +2430,17 @@ with open("lan_synthesis.wav", "wb") as f:
 
     async function deleteHistoryAudio(id) {
       if (!confirm("Are you sure you want to permanently delete this speech clip from this chat history?")) return;
-      
+
       stopCardPlaybacks();
-      
+
       const audio = activeChat.audios.find(a => a.id === id);
       if (audio && audio.audioUrl) {
         URL.revokeObjectURL(audio.audioUrl);
       }
-      
+
       activeChat.audios = activeChat.audios.filter(a => a.id !== id);
       await db.saveChat(activeChat);
-      
+
       renderChatMessages();
       showToast("Deleted speech card", "info");
     }
@@ -2363,7 +2451,7 @@ with open("lan_synthesis.wav", "wb") as f:
     let batchAudioPlayers = {};
 
     const batchDrop = document.getElementById('batch-dropzone');
-    
+
     if (batchDrop) {
       ['dragenter', 'dragover'].forEach(eventName => {
         batchDrop.addEventListener(eventName, e => {
@@ -2400,17 +2488,17 @@ with open("lan_synthesis.wav", "wb") as f:
         showToast('Invalid format! Please upload CSV or plain text script files', 'error');
         return;
       }
-      
+
       // Auto-create batch project if none is active
       if (!activeBatchProject) {
         await createNewBatchProject();
       }
-      
+
       const reader = new FileReader();
-      reader.onload = async function(e) {
+      reader.onload = async function (e) {
         const raw = e.target.result;
         const newRows = [];
-        
+
         if (ext === '.txt') {
           const lines = raw.split('\n');
           let idx = 1;
@@ -2448,19 +2536,19 @@ with open("lan_synthesis.wav", "wb") as f:
             }
           });
         }
-        
+
         activeBatchProject.rows = newRows;
-        
+
         // Default rows voice to active selected batch voice
         const currentBatchVoice = batchSelectedVoiceId || (availableVoices[0] ? availableVoices[0].id : "");
         activeBatchProject.rows.forEach(r => {
           r.voice = currentBatchVoice;
         });
-        
+
         await db.saveBatchProject(activeBatchProject);
         renderBatchProjectsList();
         renderBatchRows();
-        
+
         showToast(`Imported ${newRows.length} script rows into '${activeBatchProject.title}' successfully!`, 'success');
       };
       reader.readAsText(file);
@@ -2472,9 +2560,9 @@ with open("lan_synthesis.wav", "wb") as f:
       const resultsPanel = document.getElementById('batch-results-panel');
       const headerTitle = document.getElementById('batch-status-title');
       const processBtn = document.getElementById('btn-process-batch');
-      
+
       if (!container) return;
-      
+
       if (!activeBatchProject || !activeBatchProject.rows || activeBatchProject.rows.length === 0) {
         if (dropzone) dropzone.style.display = 'flex';
         if (resultsPanel) resultsPanel.style.display = 'none';
@@ -2483,11 +2571,11 @@ with open("lan_synthesis.wav", "wb") as f:
         }
         return;
       }
-      
+
       // Collapse dropzone completely and show results list
       if (dropzone) dropzone.style.display = 'none';
       if (resultsPanel) resultsPanel.style.display = 'block';
-      
+
       // Render Header title with clean action
       if (headerTitle) {
         headerTitle.innerHTML = `
@@ -2499,7 +2587,7 @@ with open("lan_synthesis.wav", "wb") as f:
           </div>
         `;
       }
-      
+
       // Update synthesis button text based on background process state
       if (processBtn) {
         if (activeBatchBgJobs[activeBatchProject.id]) {
@@ -2512,18 +2600,18 @@ with open("lan_synthesis.wav", "wb") as f:
           processBtn.style.color = "#000";
         }
       }
-      
+
       container.innerHTML = '';
-      
+
       // Prepare matching voices for dropdown selectors
       const currentBatchLang = document.getElementById('batch-lang-select').value;
       const filteredVoices = availableVoices.filter(v => v.language === 'all' || v.language === currentBatchLang);
-      
+
       activeBatchProject.rows.forEach(item => {
         const row = document.createElement('div');
         row.className = `batch-item-row ${item.status}`;
         row.style.cssText = "display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 12px 16px; margin-bottom: 10px; background: var(--bg-card); border-radius: var(--radius-md); border-left: 4px solid var(--border-color); transition: all var(--transition-normal);";
-        
+
         if (item.status === 'processing') {
           row.style.borderLeftColor = 'var(--dot-yellow)';
         } else if (item.status === 'success') {
@@ -2531,14 +2619,14 @@ with open("lan_synthesis.wav", "wb") as f:
         } else if (item.status === 'failed') {
           row.style.borderLeftColor = 'var(--dot-red)';
         }
-        
+
         // Build individual voice dropdown selector
         let selectHtml = `<select class="lang-pill-select" onchange="updateRowVoice('${item.id}', this.value)" style="width: 150px; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-primary); cursor: pointer;">`;
         filteredVoices.forEach(v => {
           selectHtml += `<option value="${v.id}" ${item.voice === v.id ? 'selected' : ''}>${v.name} (${v.gender.charAt(0)})</option>`;
         });
         selectHtml += `</select>`;
-        
+
         let statusBadge = `<span style="font-size: 0.75rem; font-weight: 700; color: var(--text-disabled); text-transform: uppercase;">⏳ Pending</span>`;
         if (item.status === 'processing') {
           statusBadge = `<span style="font-size: 0.75rem; font-weight: 700; color: var(--dot-yellow); text-transform: uppercase; display: flex; align-items: center; gap: 6px;">🔄 Processing...</span>`;
@@ -2547,7 +2635,7 @@ with open("lan_synthesis.wav", "wb") as f:
         } else if (item.status === 'failed') {
           statusBadge = `<span style="font-size: 0.75rem; font-weight: 700; color: var(--dot-red); text-transform: uppercase;">❌ Failed</span>`;
         }
-        
+
         let actionButtons = '';
         if (item.status === 'success' && item.audioUrl) {
           const isPlaying = batchAudioPlayers[item.id] && !batchAudioPlayers[item.id].paused;
@@ -2560,7 +2648,7 @@ with open("lan_synthesis.wav", "wb") as f:
             </button>
           `;
         }
-        
+
         row.innerHTML = `
           <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
             <span style="font-weight: 700; color: var(--text-disabled); font-size: 0.8rem;">#${item.index}</span>
@@ -2601,14 +2689,14 @@ with open("lan_synthesis.wav", "wb") as f:
     async function deleteRowFromBatch(rowId, event) {
       if (event) event.stopPropagation();
       if (!activeBatchProject || !activeBatchProject.rows) return;
-      
+
       activeBatchProject.rows = activeBatchProject.rows.filter(r => r.id !== rowId);
-      
+
       // Recalculate index
       activeBatchProject.rows.forEach((r, idx) => {
         r.index = idx + 1;
       });
-      
+
       await db.saveBatchProject(activeBatchProject);
       renderBatchProjectsList();
       renderBatchRows();
@@ -2618,10 +2706,10 @@ with open("lan_synthesis.wav", "wb") as f:
     function togglePlayRowAudio(rowId, event) {
       if (event) event.stopPropagation();
       if (!activeBatchProject || !activeBatchProject.rows) return;
-      
+
       const row = activeBatchProject.rows.find(r => r.id === rowId);
       if (!row || !row.audioUrl) return;
-      
+
       // Stop all active playbacks
       Object.keys(batchAudioPlayers).forEach(k => {
         if (k !== rowId && batchAudioPlayers[k]) {
@@ -2629,14 +2717,14 @@ with open("lan_synthesis.wav", "wb") as f:
         }
       });
       stopCardPlaybacks(); // Stop any chat message playing too
-      
+
       if (!batchAudioPlayers[rowId]) {
         batchAudioPlayers[rowId] = new Audio(row.audioUrl);
         batchAudioPlayers[rowId].onended = () => {
           renderBatchRows();
         };
       }
-      
+
       const player = batchAudioPlayers[rowId];
       if (player.paused) {
         player.play();
@@ -2644,17 +2732,17 @@ with open("lan_synthesis.wav", "wb") as f:
       } else {
         player.pause();
       }
-      
+
       renderBatchRows();
     }
 
     function downloadRowAudio(rowId, event) {
       if (event) event.stopPropagation();
       if (!activeBatchProject || !activeBatchProject.rows) return;
-      
+
       const row = activeBatchProject.rows.find(r => r.id === rowId);
       if (!row || !row.audioUrl) return;
-      
+
       const link = document.createElement('a');
       link.href = row.audioUrl;
       link.download = `${activeBatchProject.title.replace(/\s+/g, '_')}_Row_${row.index}.wav`;
@@ -2674,38 +2762,38 @@ with open("lan_synthesis.wav", "wb") as f:
       // Toggle Synthesis Loop cancel if active
       if (activeBatchBgJobs[projectId]) {
         delete activeBatchBgJobs[projectId];
-        
+
         // Reset any processing rows back to pending
         activeBatchProject.rows.forEach(r => {
           if (r.status === 'processing') r.status = 'pending';
         });
         await db.saveBatchProject(activeBatchProject);
         renderBatchRows();
-        
+
         showToast("Batch synthesis execution paused.", "info");
         return;
       }
-      
+
       // Save active selections to project
       activeBatchProject.engine = document.getElementById('batch-engine-select').value;
       activeBatchProject.lang = document.getElementById('batch-lang-select').value;
       await db.saveBatchProject(activeBatchProject);
-      
+
       const format = activeChat.format || 'wav';
       const lang = activeBatchProject.lang;
       const speed = activeChat.speed || 1.0;
-      
+
       // Transparent Engine Swapping
       if (activeBackend !== activeBatchProject.engine) {
         const chosenEngine = activeBatchProject.engine;
         showToast(`Auto-booting speech engine ${chosenEngine.toUpperCase()} offline...`, 'info');
-        
+
         const processBtn = document.getElementById('btn-process-batch');
         if (processBtn) {
           processBtn.disabled = true;
           processBtn.innerText = "⏳ Booting...";
         }
-        
+
         try {
           const response = await fetch('/api/switch', {
             method: 'POST',
@@ -2736,34 +2824,34 @@ with open("lan_synthesis.wav", "wb") as f:
           if (processBtn) processBtn.disabled = false;
         }
       }
-      
+
       // Mark job as active
       activeBatchBgJobs[projectId] = true;
       renderBatchRows();
       showToast(`Starting sequential batch synthesis for '${activeBatchProject.title}'...`, "info");
-      
+
       // Background Sequential Synthesis loop!
       for (let i = 0; i < activeBatchProject.rows.length; i++) {
         // Stop if user paused this project synthesis
         if (!activeBatchBgJobs[projectId]) break;
-        
+
         const item = activeBatchProject.rows[i];
         if (item.status === 'success' && item.audioUrl) continue;
-        
+
         item.status = 'processing';
-        
+
         // Re-render rows if this is still the active project
         if (activeBatchProject && activeBatchProject.id === projectId) {
           renderBatchRows();
         }
-        
+
         const rowVoice = item.voice || batchSelectedVoiceId || (availableVoices[0] ? availableVoices[0].id : "");
         if (!rowVoice) {
           item.status = 'failed';
           if (activeBatchProject && activeBatchProject.id === projectId) renderBatchRows();
           continue;
         }
-        
+
         try {
           const response = await fetch('/api/tts', {
             method: 'POST',
@@ -2776,7 +2864,7 @@ with open("lan_synthesis.wav", "wb") as f:
               format: format
             })
           });
-          
+
           if (response.ok) {
             const blob = await response.blob();
             item.audioBlob = blob;
@@ -2788,16 +2876,16 @@ with open("lan_synthesis.wav", "wb") as f:
         } catch (e) {
           item.status = 'failed';
         }
-        
+
         // Persistent save
         await db.saveBatchProject(activeBatchProject);
-        
+
         // Live updates if viewing
         if (activeBatchProject && activeBatchProject.id === projectId) {
           renderBatchRows();
         }
       }
-      
+
       // Job complete
       delete activeBatchBgJobs[projectId];
       if (activeBatchProject && activeBatchProject.id === projectId) {
@@ -2809,7 +2897,7 @@ with open("lan_synthesis.wav", "wb") as f:
     async function clearBatchQueue() {
       if (!activeBatchProject) return;
       if (!confirm("Are you sure you want to clear all rows in this batch project?")) return;
-      
+
       activeBatchProject.rows = [];
       await db.saveBatchProject(activeBatchProject);
       renderBatchProjectsList();
@@ -2825,14 +2913,14 @@ with open("lan_synthesis.wav", "wb") as f:
       const pocketCard = document.getElementById('cloning-pocket-card');
       const supertonicCard = document.getElementById('cloning-supertonic-card');
       const jsonProfile = document.getElementById('json-profile-card');
-      
+
       if (!activeBackend || activeBackend === 'kokoro') {
         disabledScreen.style.display = 'flex';
         activeGrid.style.display = 'none';
       } else {
         disabledScreen.style.display = 'none';
         activeGrid.style.display = 'grid';
-        
+
         if (activeBackend === 'pocket') {
           pocketCard.style.display = 'block';
           supertonicCard.style.display = 'none';
@@ -2848,7 +2936,7 @@ with open("lan_synthesis.wav", "wb") as f:
 
     let selectedCloningAudioFile = null;
     const cloningDrop = document.getElementById('cloning-drag-zone');
-    
+
     if (cloningDrop) {
       ['dragenter', 'dragover'].forEach(eventName => {
         cloningDrop.addEventListener(eventName, e => {
@@ -2882,15 +2970,15 @@ with open("lan_synthesis.wav", "wb") as f:
     function processCloningAudioFile(file) {
       const allowed = ['.mp3', '.wav', '.ogg', '.flac'];
       const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-      
+
       if (!allowed.includes(ext)) {
         showToast('Invalid audio format! Please upload WAV, MP3, OGG or FLAC', 'error');
         return;
       }
-      
+
       selectedCloningAudioFile = file;
       document.getElementById('cloning-drag-text').innerText = `Loaded: ${file.name}`;
-      
+
       const clean = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_");
       document.getElementById('clone-speaker-name').value = clean;
     }
@@ -2906,28 +2994,28 @@ with open("lan_synthesis.wav", "wb") as f:
         showToast("Please enter a custom speaker name!", "error");
         return;
       }
-      
+
       const formData = new FormData();
       formData.append('name', name);
       formData.append('language', lang);
       formData.append('file', selectedCloningAudioFile);
-      
+
       showToast("Uploading prompt file & projecting voice timbre model...", "info");
-      
+
       try {
         const response = await fetch('/api/pocket/upload-voice', {
           method: 'POST',
           body: formData
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           showToast(data.message, 'success');
-          
+
           selectedCloningAudioFile = null;
           document.getElementById('cloning-drag-text').innerText = "Drop reference audio (MP3, WAV, OGG)";
           document.getElementById('clone-speaker-name').value = '';
-          
+
           fetchVoices();
         } else {
           const err = await response.json();
@@ -2948,24 +3036,24 @@ with open("lan_synthesis.wav", "wb") as f:
     function populateMixerDropdowns(voices) {
       const selectA = document.getElementById('mix-voice-a');
       const selectB = document.getElementById('mix-voice-b');
-      
+
       if (!selectA || !selectB) return;
-      
+
       selectA.innerHTML = '';
       selectB.innerHTML = '';
-      
+
       voices.forEach(voice => {
         const optA = document.createElement('option');
         optA.value = voice.id;
         optA.innerText = `${voice.name} (${voice.gender.charAt(0)})`;
         selectA.appendChild(optA);
-        
+
         const optB = document.createElement('option');
         optB.value = voice.id;
         optB.innerText = `${voice.name} (${voice.gender.charAt(0)})`;
         selectB.appendChild(optB);
       });
-      
+
       if (voices.length > 1) {
         selectB.selectedIndex = 1;
       }
@@ -2976,25 +3064,25 @@ with open("lan_synthesis.wav", "wb") as f:
       const voiceB = document.getElementById('mix-voice-b').value;
       const weight = parseFloat(document.getElementById('mix-ratio-slider').value) / 100.0;
       const name = document.getElementById('mix-voice-name').value.trim();
-      
+
       if (!name) {
         showToast('Please enter a name for the blended speaker timbre!', 'error');
         return;
       }
-      
+
       showToast('Blending presetted style vector timbres offline...', 'info');
-      
+
       try {
         const response = await fetch('/api/supertonic/mix', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ voice_a: voiceA, voice_b: voiceB, weight, name })
         });
-        
+
         if (response.ok) {
           showToast(`Custom speaker '${name}' registered successfully!`, 'success');
           document.getElementById('mix-voice-name').value = '';
-          
+
           // Save Custom Voice into IndexedDB for dynamic sidebar management
           const newVoiceObj = {
             id: `voice-${Date.now()}`,
@@ -3007,7 +3095,7 @@ with open("lan_synthesis.wav", "wb") as f:
           };
           customVoices.push(newVoiceObj);
           await db.saveVoice(newVoiceObj);
-          
+
           renderCustomVoicesList();
           fetchCustomClonedVoices();
           fetchVoices();
@@ -3026,7 +3114,7 @@ with open("lan_synthesis.wav", "wb") as f:
         const data = await response.json();
         const scroller = document.getElementById('custom-voices-list-cloning');
         scroller.innerHTML = '';
-        
+
         if (data.custom_voices && data.custom_voices.length > 0) {
           data.custom_voices.forEach(voice => {
             const badge = document.createElement('span');
@@ -3045,25 +3133,25 @@ with open("lan_synthesis.wav", "wb") as f:
     async function uploadVoiceProfile(event) {
       const file = event.target.files[0];
       if (!file) return;
-      
+
       const name = prompt('Name this imported JSON profile:', file.name.replace('.json', ''));
       if (!name) return;
-      
+
       const formData = new FormData();
       formData.append('name', name);
       formData.append('file', file);
-      
+
       showToast('Uploading profile file...', 'info');
-      
+
       try {
         const response = await fetch('/api/supertonic/upload-voice', {
           method: 'POST',
           body: formData
         });
-        
+
         if (response.ok) {
           showToast(`Imported '${name}' style successfully!`, 'success');
-          
+
           // Save Custom Cloned Voice into IndexedDB
           const newVoiceObj = {
             id: `voice-${Date.now()}`,
@@ -3073,7 +3161,7 @@ with open("lan_synthesis.wav", "wb") as f:
           };
           customVoices.push(newVoiceObj);
           await db.saveVoice(newVoiceObj);
-          
+
           renderCustomVoicesList();
           fetchCustomClonedVoices();
           fetchVoices();
@@ -3108,7 +3196,7 @@ with open("lan_synthesis.wav", "wb") as f:
     function showSettingsTab(tabId) {
       document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.settings-nav-btn').forEach(b => b.classList.remove('active'));
-      
+
       document.getElementById(tabId).classList.add('active');
       document.getElementById(`tab-${tabId}`).classList.add('active');
     }
@@ -3119,7 +3207,7 @@ with open("lan_synthesis.wav", "wb") as f:
         sizeSpan.innerText = "Sandbox Enabled";
         return;
       }
-      
+
       navigator.storage.estimate().then(estimate => {
         const mb = (estimate.usage / (1024 * 1024)).toFixed(2);
         sizeSpan.innerText = `${mb} MB cached browser storage`;
@@ -3136,11 +3224,11 @@ with open("lan_synthesis.wav", "wb") as f:
 
     async function nukeIndexedDatabase() {
       if (!confirm("🚨 DANGER: Clear database reset? This is irreversible!")) return;
-      
+
       stopCardPlaybacks();
       await db.clearAll();
       localStorage.clear();
-      
+
       showToast("Workspace database cache wiped. Reloading workstation...", "success");
       setTimeout(() => {
         window.location.reload();
@@ -3159,7 +3247,7 @@ with open("lan_synthesis.wav", "wb") as f:
     function renderGlobalSettingsLogs() {
       const tbody = document.getElementById('settings-history-tbody');
       tbody.innerHTML = '';
-      
+
       let all = [];
       chats.forEach(c => {
         c.audios.forEach(a => {
@@ -3169,14 +3257,14 @@ with open("lan_synthesis.wav", "wb") as f:
           });
         });
       });
-      
-      all.sort((a,b) => b.id.localeCompare(a.id));
-      
+
+      all.sort((a, b) => b.id.localeCompare(a.id));
+
       if (all.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-disabled);">No global records found.</td></tr>`;
         return;
       }
-      
+
       all.forEach(item => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -3204,4 +3292,5 @@ with open("lan_synthesis.wav", "wb") as f:
     };
   </script>
 </body>
+
 </html>

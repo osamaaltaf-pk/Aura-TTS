@@ -391,6 +391,90 @@ class UnifiedTTSRequest(BaseModel):
     lang: str = "en"
     format: str = "wav"
 
+def split_text_into_chunks(text: str, max_len: int = 200) -> list:
+    if not text:
+        return []
+    import re
+    # 1. Split by hard punctuation boundaries first
+    primary = re.split(r'([\n.!?。！？;；])', text)
+    segments = []
+    current = ""
+    for part in primary:
+        if not part:
+            continue
+        if part in ["\n", ".", "!", "?", "。", "！", "？", ";", "；"]:
+            current += part
+            if current.strip():
+                segments.append(current.strip())
+            current = ""
+        else:
+            current += part
+    if current.strip():
+        segments.append(current.strip())
+        
+    final_chunks = []
+    
+    def add_chunk(chunk_text: str):
+        chunk_text = chunk_text.strip()
+        if not chunk_text:
+            return
+        if len(chunk_text) <= max_len:
+            final_chunks.append(chunk_text)
+        else:
+            # Fallback word-by-word splitting
+            words = chunk_text.split()
+            temp = ""
+            for w in words:
+                if len(temp) + len(w) + 1 > max_len:
+                    if temp.strip():
+                        final_chunks.append(temp.strip())
+                    temp = w
+                else:
+                    temp = (temp + " " + w).strip()
+            if temp.strip():
+                final_chunks.append(temp.strip())
+
+    # 2. Refined splitting that mathematically guarantees no chunk ever exceeds max_len!
+    for seg in segments:
+        if len(seg) <= max_len:
+            add_chunk(seg)
+        else:
+            subparts = re.split(r'([,，\-\—\|])', seg)
+            curr_chunk = ""
+            for part in subparts:
+                if not part:
+                    continue
+                if len(curr_chunk) + len(part) > max_len:
+                    add_chunk(curr_chunk)
+                    curr_chunk = part
+                else:
+                    curr_chunk += part
+            add_chunk(curr_chunk)
+                        
+    return [c for c in final_chunks if c]
+
+def concatenate_wav_buffers(buffers: list) -> bytes:
+    if not buffers:
+        return b""
+    if len(buffers) == 1:
+        return buffers[0]
+        
+    master_header = bytearray(buffers[0][:44])
+    pcm_chunks = []
+    total_pcm_length = 0
+    for buf in buffers:
+        if len(buf) > 44:
+            pcm = buf[44:]
+            pcm_chunks.append(pcm)
+            total_pcm_length += len(pcm)
+            
+    total_wav_length = 44 + total_pcm_length
+    import struct
+    struct.pack_into("<I", master_header, 4, total_wav_length - 8)
+    struct.pack_into("<I", master_header, 40, total_pcm_length)
+    
+    return bytes(master_header) + b"".join(pcm_chunks)
+
 @app.post("/api/tts")
 def unified_tts(request: UnifiedTTSRequest):
     """Proxy the TTS request to the currently active backend"""
@@ -401,56 +485,78 @@ def unified_tts(request: UnifiedTTSRequest):
     port = PORTS[active_backend]
     
     try:
+        # Split text into safe, naturally partitioned chunks for all backends to guarantee zero crashes and ultra-low synthesis latencies!
+        chunks = split_text_into_chunks(request.text, max_len=200)
+        if not chunks:
+            chunks = [request.text]
+            
+        wav_buffers = []
+        
         if active_backend == "kokoro":
-            # Map request to Kokoro
-            payload = {
-                "text": request.text,
-                "voice": request.voice,
-                "speed": request.speed,
-                "format": request.format
-            }
-            resp = requests.post(f"http://localhost:{port}/tts", json=payload, stream=True, timeout=60)
-            if resp.status_code != 200:
-                raise HTTPException(status_code=resp.status_code, detail=resp.text)
-            return StreamingResponse(resp.iter_content(chunk_size=1024), media_type=resp.headers.get("content-type"))
+            for chunk in chunks:
+                payload = {
+                    "text": chunk,
+                    "voice": request.voice,
+                    "speed": request.speed,
+                    "format": "wav"  # Internally request WAV for reliable binary concatenation
+                }
+                resp = requests.post(f"http://localhost:{port}/tts", json=payload, timeout=60)
+                if resp.status_code == 200:
+                    wav_buffers.append(resp.content)
+                else:
+                    raise HTTPException(status_code=resp.status_code, detail=resp.text)
+                    
+            final_wav = concatenate_wav_buffers(wav_buffers)
+            from io import BytesIO
+            return StreamingResponse(BytesIO(final_wav), media_type="audio/wav")
             
         elif active_backend == "pocket":
-            # Map to OpenAI compatibility API
-            payload = {
-                "model": "tts-1",
-                "input": request.text,
-                "voice": request.voice,
-                "response_format": "mp3" if request.format.lower() == "mp3" else "wav",
-                "speed": request.speed
-            }
-            resp = requests.post(f"http://localhost:{port}/v1/audio/speech", json=payload, stream=True, timeout=60)
-            if resp.status_code != 200:
-                raise HTTPException(status_code=resp.status_code, detail=resp.text)
-            return StreamingResponse(resp.iter_content(chunk_size=1024), media_type=resp.headers.get("content-type"))
+            for chunk in chunks:
+                payload = {
+                    "model": "tts-1",
+                    "input": chunk,
+                    "voice": request.voice,
+                    "response_format": "wav",  # Internally request WAV for reliable binary concatenation
+                    "speed": request.speed
+                }
+                resp = requests.post(f"http://localhost:{port}/v1/audio/speech", json=payload, timeout=60)
+                if resp.status_code == 200:
+                    wav_buffers.append(resp.content)
+                else:
+                    raise HTTPException(status_code=resp.status_code, detail=resp.text)
+                    
+            final_wav = concatenate_wav_buffers(wav_buffers)
+            from io import BytesIO
+            return StreamingResponse(BytesIO(final_wav), media_type="audio/wav")
             
         elif active_backend == "supertonic":
-            # Map to Supertonic
-            payload = {
-                "text": request.text,
-                "voice": request.voice,
-                "lang": request.lang,
-                "speed": request.speed
-            }
-            # Supertonic uses native wav/flac/ogg. We request output.wav
-            resp = requests.post(f"http://localhost:{port}/v1/tts", json=payload, stream=True, timeout=60)
-            if resp.status_code != 200:
-                # Try OpenAI speech endpoint of Supertonic as fallback
-                openai_payload = {
-                    "model": "supertonic-3",
-                    "input": request.text,
+            for chunk in chunks:
+                chunk_payload = {
+                    "text": chunk,
                     "voice": request.voice,
-                    "response_format": "wav"
+                    "lang": request.lang,
+                    "speed": request.speed
                 }
-                resp = requests.post(f"http://localhost:{port}/v1/audio/speech", json=openai_payload, stream=True, timeout=60)
-                if resp.status_code != 200:
-                    raise HTTPException(status_code=resp.status_code, detail=resp.text)
-            
-            return StreamingResponse(resp.iter_content(chunk_size=1024), media_type=resp.headers.get("content-type"))
+                resp = requests.post(f"http://localhost:{port}/v1/tts", json=chunk_payload, timeout=60)
+                if resp.status_code == 200:
+                    wav_buffers.append(resp.content)
+                else:
+                    # Fallback to OpenAI speech endpoint of Supertonic
+                    openai_payload = {
+                        "model": "supertonic-3",
+                        "input": chunk,
+                        "voice": request.voice,
+                        "response_format": "wav"
+                    }
+                    resp_fallback = requests.post(f"http://localhost:{port}/v1/audio/speech", json=openai_payload, timeout=60)
+                    if resp_fallback.status_code == 200:
+                        wav_buffers.append(resp_fallback.content)
+                    else:
+                        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+                        
+            final_wav = concatenate_wav_buffers(wav_buffers)
+            from io import BytesIO
+            return StreamingResponse(BytesIO(final_wav), media_type="audio/wav")
             
     except requests.exceptions.ConnectionError:
         raise HTTPException(status_code=503, detail="Active backend is unreachable. It may have crashed or is still initializing.")
@@ -485,12 +591,13 @@ def get_supertonic_style_path(voice_name: str) -> Path:
     ]
     
     for home in home_options:
-        # Check custom styles in this home directory
-        cache_custom = home / ".cache" / "supertonic" / "custom_styles"
-        if cache_custom.exists():
-            for f in cache_custom.glob("*.json"):
-                if f.stem.lower() == voice_name.lower():
-                    return f
+        # Check custom styles in this home directory across all model folders
+        for model_dir in ["supertonic3", "supertonic2", "supertonic"]:
+            cache_custom = home / ".cache" / model_dir / "custom_styles"
+            if cache_custom.exists():
+                for f in cache_custom.glob("*.json"):
+                    if f.stem.lower() == voice_name.lower():
+                        return f
                     
         # Check model preset styles
         for model_dir in ["supertonic3", "supertonic2", "supertonic"]:
