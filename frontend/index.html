@@ -1,0 +1,3207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura TTS — Local Speech Workstation</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Premium Inline UI Enhancements & Fluid Micro-Animations */
+    :root {
+      --wave-anim-duration: 1.2s;
+    }
+    
+    /* Elegant Waveform Animation */
+    @keyframes waveFluid {
+      0%, 100% { height: 6px; transform: translateY(0); }
+      50% { height: 26px; transform: translateY(-3px); }
+    }
+    
+    .voice-wave-container.generating .wave-bar {
+      animation: waveFluid var(--wave-anim-duration) ease-in-out infinite;
+      background: linear-gradient(135deg, var(--accent-color), var(--dot-green));
+      border-radius: 4px;
+      width: 4px;
+    }
+    
+    .voice-wave-container.generating .wave-bar:nth-child(1) { animation-delay: 0.1s; }
+    .voice-wave-container.generating .wave-bar:nth-child(2) { animation-delay: 0.25s; }
+    .voice-wave-container.generating .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+    .voice-wave-container.generating .wave-bar:nth-child(4) { animation-delay: 0.55s; }
+    .voice-wave-container.generating .wave-bar:nth-child(5) { animation-delay: 0.7s; }
+
+    /* Glassmorphic Settings Bar for modes */
+    .batch-settings-bar, .cloning-settings-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin-bottom: 20px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .dark-theme .batch-settings-bar, .dark-theme .cloning-settings-bar {
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Status Dot Animation */
+    .status-badge-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.03);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+    }
+    
+    .dark-theme .status-badge-container {
+      background: rgba(255, 255, 255, 0.04);
+    }
+    
+    .status-indicator-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-disabled);
+      position: relative;
+    }
+    
+    .status-indicator-dot.active {
+      background: #27c93f;
+      box-shadow: 0 0 8px #27c93f;
+    }
+    
+    .status-indicator-dot.active::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: inherit;
+      border-radius: 50%;
+      animation: pulse-ring 1.5s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+    }
+    
+    @keyframes pulse-ring {
+      0% { transform: scale(.33); opacity: 1; }
+      80%, 100% { transform: scale(2.2); opacity: 0; }
+    }
+    
+    /* Elegant Hover Interactions */
+    .btn-submit-pill {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-submit-pill:hover {
+      transform: scale(1.05) translateY(-1px);
+    }
+    .btn-submit-pill:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- LEFT SIDEBAR: CHAT HISTORY & MODES -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <!-- macOS-style Dots representing modes -->
+          <div class="window-dots">
+            <div class="dot dot-red active" id="dot-chat" onclick="switchAppMode('chat')" data-title="Chat Playground (Red)"></div>
+            <div class="dot dot-yellow" id="dot-batch" onclick="switchAppMode('batch')" data-title="Batch Importer (Yellow)"></div>
+            <div class="dot dot-green" id="dot-cloning" onclick="switchAppMode('cloning')" data-title="Voice Cloning (Green)"></div>
+          </div>
+          
+          <!-- Black-and-white theme toggle icon in left upper corner -->
+          <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">◐</button>
+        </div>
+        
+        <!-- Toggle button to collapse sidebar -->
+        <button class="btn-sidebar-toggle" id="left-toggle" onclick="toggleSidebar()" title="Collapse chats">
+          📑
+        </button>
+      </div>
+
+      <!-- Actions Block -->
+      <div class="sidebar-actions">
+        <button class="new-chat-btn" id="sidebar-new-action-btn" onclick="createNewChat()">
+          <i>📝</i> New Chat
+        </button>
+        <div class="sidebar-search-wrapper">
+          <span class="sidebar-search-icon">🔍</span>
+          <input type="text" class="sidebar-search-input" id="chat-search" placeholder="Search chats..." oninput="filterChats()">
+        </div>
+      </div>
+
+      <!-- Scroller list of chats -->
+      <div class="chats-scroller" id="chats-list">
+        <!-- Injected dynamically via DB -->
+      </div>
+
+      <!-- Footer: Active profile & settings trigger -->
+      <div class="sidebar-footer">
+        <div class="profile-trigger" onclick="toggleSettingsModal(true)">
+          <div class="profile-dot"></div>
+          <span class="profile-name" id="user-display-name">Aura Creator</span>
+        </div>
+        <button class="chat-action-btn" onclick="toggleSettingsModal(true)" style="font-size: 1.1rem;">⚙️</button>
+      </div>
+    </aside>
+
+    <!-- CENTRAL Speach Canvas Workspace -->
+    <main class="chat-workspace">
+      
+      <!-- Top header -->
+      <header class="chat-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <!-- Restore sidebar button -->
+          <button class="btn-sidebar-toggle" id="sidebar-restore-btn" onclick="toggleSidebar()" style="display: none;" title="Open chats">
+            📑
+          </button>
+          <h2 style="font-family: var(--font-title); font-weight: 700; font-size: 1.1rem; color: var(--text-primary);" id="chat-title-header">
+            Workspace Chat
+          </h2>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <!-- Telemetry Live Engine Status Indicator -->
+          <div class="status-badge-container">
+            <span class="status-indicator-dot" id="system-status-dot"></span>
+            <span id="system-status-text">OFFLINE</span>
+          </div>
+
+          <div class="mode-badge chat" id="active-mode-badge">
+            Chat Mode
+          </div>
+        </div>
+      </header>
+
+      <!-- VIEW 1: CHAT PLAYGROUND SCREEN -->
+      <div class="chat-feed-container" id="chat-feed-screen">
+        <!-- Placeholder if empty -->
+        <div class="ollama-placeholder" id="feed-placeholder">
+          <div class="llama-icon">🦙</div>
+          <h2>Aura Local TTS</h2>
+          <p>Synthesize ultra-high fidelity speech locally offline.<br>Select your speech engine and enter your text below to begin.</p>
+        </div>
+
+        <!-- Rendered dynamically -->
+        <div id="messages-list-wrapper" style="display: flex; flex-direction: column; gap: 24px; width: 100%;"></div>
+      </div>
+
+      <!-- SUBMIT PILL FOOTER CONTAINER (Chat Mode Only) -->
+      <div class="submit-container" id="chat-submit-footer">
+        <div class="submit-pill">
+          <!-- Text Input area -->
+          <textarea class="submit-textarea" id="submit-text-input" placeholder="Send a message (Enter to generate, Shift+Enter for new line)..." onkeydown="handleInputKeydown(event)" oninput="autoResizeTextarea(this)"></textarea>
+          
+          <div class="submit-controls">
+            
+            <!-- Speaker selector trigger -->
+            <div class="speaker-selector-wrapper" style="position: relative; display: inline-flex; align-items: center;">
+              <button class="btn-speaker-trigger" id="speaker-select-btn" onclick="toggleSpeakerPopup(event)" type="button" title="Select Speaker Style">
+                🗣️
+              </button>
+              <!-- Speaker popup overlay dialog -->
+              <div class="speaker-overlay-popup" id="speaker-overlay" onclick="event.stopPropagation()">
+                <div class="speaker-popup-header">Select Voice</div>
+                <div class="speaker-popup-list" id="speaker-popup-list">
+                  <!-- Injected dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Language select dropdown (visible only for Supertonic) -->
+            <select class="lang-pill-select" id="lang-select" onchange="saveActiveChatSettings(); renderVoices()">
+              <option value="en">English (en)</option>
+              <option value="zh">Chinese (zh)</option>
+              <option value="ja">Japanese (ja)</option>
+              <option value="es">Spanish (es)</option>
+              <option value="fr">French (fr)</option>
+              <option value="de">German (de)</option>
+              <option value="ko">Korean (ko)</option>
+              <option value="hi">Hindi (hi)</option>
+              <option value="it">Italian (it)</option>
+              <option value="pt">Portuguese (pt)</option>
+              <option value="na">Language-Agnostic (na)</option>
+            </select>
+
+            <!-- Chat Mode Model Dropdown -->
+            <select class="model-pill-select" id="compact-engine-select" onchange="triggerEngineSwitch('chat')">
+              <option value="kokoro">kokoro</option>
+              <option value="pocket">pocket</option>
+              <option value="supertonic">supertonic</option>
+            </select>
+
+            <!-- Submit round button -->
+            <button class="btn-submit-pill" id="btn-submit" onclick="generateSpeech()" title="Synthesize Speech">
+              ↑
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 2: BATCH MODE SCREEN -->
+      <div class="batch-workspace" id="batch-screen">
+        <div class="cloning-card-header" style="border: none; padding: 0; margin-bottom: 5px;">
+          <h2 style="font-family: var(--font-title); font-size: 1.4rem;">Batch Speech Generation</h2>
+          <p style="color: var(--text-secondary);">Drop spreadsheets or text script files to synthesize multiple rows sequentially.</p>
+        </div>
+
+        <!-- BATCH MODE OWN SELECTION & SETTINGS PILL -->
+        <div class="batch-settings-bar">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary);">Config Engine:</span>
+            
+            <!-- Batch Mode Model Dropdown -->
+            <select class="model-pill-select" id="batch-engine-select" onchange="triggerEngineSwitch('batch')">
+              <option value="kokoro">kokoro</option>
+              <option value="pocket">pocket</option>
+              <option value="supertonic">supertonic</option>
+            </select>
+
+            <!-- Batch Mode Language Dropdown -->
+            <select class="lang-pill-select" id="batch-lang-select" onchange="renderVoices()">
+              <option value="en">English (en)</option>
+              <option value="zh">Chinese (zh)</option>
+              <option value="ja">Japanese (ja)</option>
+              <option value="es">Spanish (es)</option>
+              <option value="fr">French (fr)</option>
+              <option value="de">German (de)</option>
+              <option value="ko">Korean (ko)</option>
+              <option value="hi">Hindi (hi)</option>
+              <option value="it">Italian (it)</option>
+              <option value="pt">Portuguese (pt)</option>
+              <option value="na">Language-Agnostic (na)</option>
+            </select>
+
+            <!-- Batch Mode Speaker Select popup -->
+            <div class="speaker-selector-wrapper" style="position: relative; display: inline-flex; align-items: center;">
+              <button class="btn-speaker-trigger" id="batch-speaker-btn" onclick="toggleBatchSpeakerPopup(event)" type="button" title="Select Batch Speaker">
+                🗣️
+              </button>
+              <div class="speaker-overlay-popup" id="batch-speaker-overlay" onclick="event.stopPropagation()">
+                <div class="speaker-popup-header">Select Batch Voice</div>
+                <div class="speaker-popup-list" id="batch-speaker-popup-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Drag zone -->
+        <div class="batch-dropzone" id="batch-dropzone" onclick="document.getElementById('batch-file-picker').click()">
+          <i>📂</i>
+          <span id="batch-drop-text" style="font-weight: 600; font-size: 0.95rem;">Drag & drop spreadsheet (.csv) or text files (.txt) here</span>
+          <p style="font-size: 0.75rem; color: var(--text-disabled); margin-top: 5px;">or click to browse local storage</p>
+          <input type="file" id="batch-file-picker" accept=".txt,.csv" style="display: none;" onchange="handleBatchFileSelect(event)">
+        </div>
+
+        <div class="batch-results-list" id="batch-results-panel" style="display: none;">
+          <div class="batch-results-title" id="batch-status-title">Parsed Rows (0)</div>
+          <div id="batch-items-rows-container"></div>
+          
+          <div style="display: flex; gap: 15px; margin-top: 20px;">
+            <button class="new-chat-btn" id="btn-process-batch" onclick="processBatchTTS()" style="background: var(--dot-yellow); color: #000; font-weight: 700; text-align: center; justify-content: center; height: 42px;">
+              ⚡ Start Batch Synthesis
+            </button>
+            <button class="new-chat-btn" onclick="clearBatchQueue()" style="background: rgba(0,0,0,0.03); color: var(--text-primary); width: auto;">
+              Clear Queue
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 3: VOICE CLONING WORKSPACE -->
+      <div class="cloning-workspace" id="cloning-screen">
+        
+        <!-- CLONING MODE OWN MODEL SELECTOR PILL -->
+        <div class="cloning-settings-bar" style="margin-bottom: 25px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary);">Config Engine:</span>
+            <select class="model-pill-select" id="cloning-engine-select" onchange="triggerEngineSwitch('cloning')">
+              <option value="kokoro">kokoro</option>
+              <option value="pocket">pocket</option>
+              <option value="supertonic">supertonic</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Zero-Shot Cloning Alert Overlay if Kokoro loaded -->
+        <div class="cloning-alert-screen" id="cloning-disabled-screen" style="display: none;">
+          <i>⚠️</i>
+          <h2 style="font-family: var(--font-title); font-weight: 700; font-size: 1.5rem; color: var(--text-primary);">Zero-Shot Cloning Disabled</h2>
+          <p style="max-width: 480px; font-size: 0.85rem; line-height: 1.5; margin-top: 6px;">
+            Kokoro TTS uses unified static matrices that do not support Dynamic Timbre Cloning. 
+            Please select **Pocket TTS** or **Supertonic** from the dropdown above to unlock zero-shot dynamic cloned speakers!
+          </p>
+        </div>
+
+        <!-- Dynamic Cloner Grid if supported -->
+        <div class="cloning-grid" id="cloning-active-grid">
+          
+          <!-- Cloner Card A: Voice Cloning via Reference Audio (Pocket TTS specific) -->
+          <div class="cloning-card" id="cloning-pocket-card">
+            <div class="cloning-card-header">
+              <h3>Zero-Shot Voice Cloner</h3>
+              <p>Upload a short reference audio clip to create a dynamic clone of any speaker style.</p>
+            </div>
+
+            <div class="form-group">
+              <label for="clone-speaker-name">Speaker Name</label>
+              <input type="text" class="form-control" id="clone-speaker-name" placeholder="e.g. My_Cloned_Voice">
+            </div>
+
+            <div class="form-group">
+              <label>Reference Audio Clip</label>
+              <div class="drag-voice-audio-zone" id="cloning-drag-zone" onclick="document.getElementById('cloning-audio-picker').click()">
+                <i>📤</i>
+                <span id="cloning-drag-text">Drop reference audio (MP3, WAV, OGG)</span>
+                <input type="file" id="cloning-audio-picker" accept=".mp3,.wav,.ogg,.flac" style="display: none;" onchange="handleCloningAudioSelect(event)">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="clone-speaker-lang">Cloned Speaker Language</label>
+              <select class="form-control" id="clone-speaker-lang">
+                <option value="en">English (en)</option>
+                <option value="zh">Chinese (zh)</option>
+                <option value="ja">Japanese (ja)</option>
+                <option value="es">Spanish (es)</option>
+                <option value="fr">French (fr)</option>
+                <option value="de">German (de)</option>
+                <option value="ko">Korean (ko)</option>
+                <option value="hi">Hindi (hi)</option>
+                <option value="it">Italian (it)</option>
+                <option value="pt">Portuguese (pt)</option>
+              </select>
+            </div>
+
+            <button class="new-chat-btn" onclick="uploadVoiceCloningPrompt()" style="background: var(--dot-green); color: #000; font-weight: 700; justify-content: center; height: 42px;">
+              🎙️ Clone Voice Prompt
+            </button>
+          </div>
+
+          <!-- Cloner Card B: Supertonic Preset Style Mixer (Supertonic specific) -->
+          <div class="cloning-card" id="cloning-supertonic-card" style="display: none;">
+            <div class="cloning-card-header">
+              <h3>Supertonic Preset Style Mixer</h3>
+              <p>Mathematically blend preset timbres to build customized hybrid speaker styles.</p>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="mix-voice-a">Voice A</label>
+                <select class="form-control" id="mix-voice-a">
+                  <!-- Loaded dynamically -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="mix-voice-b">Voice B</label>
+                <select class="form-control" id="mix-voice-b">
+                  <!-- Loaded dynamically -->
+                </select>
+              </div>
+            </div>
+
+            <div class="blend-slider-block">
+              <div class="blend-slider-text">
+                <span id="mix-percent-a" style="color: var(--dot-red);">Voice A (50%)</span>
+                <span id="mix-percent-b" style="color: var(--dot-green);">Voice B (50%)</span>
+              </div>
+              <input type="range" class="blend-slider-track" id="mix-ratio-slider" min="0" max="100" value="50" oninput="updateBlendPercentages(this.value)">
+            </div>
+
+            <div class="form-group">
+              <label for="mix-voice-name">Blend Timbre Name</label>
+              <input type="text" class="form-control" id="mix-voice-name" placeholder="e.g. Mixed_Style">
+            </div>
+
+            <button class="new-chat-btn" onclick="mixSupertonicVoices()" style="background: var(--dot-green); color: #000; font-weight: 700; justify-content: center; height: 42px;">
+              ✨ Interpolate & Blend
+            </button>
+          </div>
+
+          <!-- Helper list of Custom blended voices -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="cloning-card">
+              <div class="cloning-card-header" style="border: none; padding: 0; margin-bottom: 10px;">
+                <h3>Timbre Library</h3>
+                <p>Mixed and registered custom styles</p>
+              </div>
+              <div class="custom-library-scroller" id="custom-voices-list-cloning">
+                <span style="color: var(--text-disabled); font-size: 0.75rem;">No custom styles mixed yet.</span>
+              </div>
+            </div>
+            
+            <div class="cloning-card" id="json-profile-card" style="display: none; padding: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('json-file-picker').click()">
+              <i style="font-size: 1.5rem; color: var(--dot-green); display: block; margin-bottom: 5px;">📤</i>
+              <span style="font-size: 0.8rem; font-weight: 600;">Import JSON Profile</span>
+              <p style="font-size: 0.7rem; color: var(--text-disabled); margin-top: 2px;">Upload style exported from Supertonic</p>
+              <input type="file" id="json-file-picker" accept=".json" style="display: none;" onchange="uploadVoiceProfile(event)">
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- SETTINGS MODAL DIALOG POPUP OVERLAY -->
+  <div class="modal-backdrop" id="settings-modal" onclick="closeSettingsOnClickOutside(event)">
+    <div class="settings-dialog" id="settings-dialog">
+      <div class="settings-nav">
+        <h3>⚙️ Settings</h3>
+        <button class="settings-nav-btn active" onclick="showSettingsTab('settings-general')" id="tab-settings-general">🔧 Profile Settings</button>
+        <button class="settings-nav-btn" onclick="showSettingsTab('settings-network')" id="tab-settings-network">🌐 LAN API Sharing</button>
+        <button class="settings-nav-btn" onclick="showSettingsTab('settings-telemetry')" id="tab-settings-telemetry">📊 Telemetry HUD</button>
+        <button class="settings-nav-btn" onclick="showSettingsTab('settings-logs')" id="tab-settings-logs">📁 Global Logs</button>
+        
+        <button class="new-chat-btn" onclick="toggleSettingsModal(false)" style="margin-top: auto; justify-content: center; height: 35px; background: rgba(0,0,0,0.03);">Done</button>
+      </div>
+
+      <div class="settings-body">
+        
+        <!-- Tab 1: Profile -->
+        <div class="settings-panel active" id="settings-general">
+          <div class="cloning-card-header" style="border: none; padding: 0; margin-bottom: 20px;">
+            <h4 style="font-family: var(--font-title); font-size: 1.1rem;">Profile Settings</h4>
+            <p>Customize identity profiles and storage caches.</p>
+          </div>
+          <div class="form-group">
+            <label for="settings-username">Creator Username</label>
+            <input type="text" class="form-control" id="settings-username" value="Aura Creator" oninput="updateProfileName(this.value)">
+          </div>
+          <div class="form-group" style="margin-top: 25px;">
+            <label>Cache Database Space Size</label>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 6px;">All custom script text and generated binary audio Blobs are sandboxed locally.</p>
+            <span class="mode-badge chat" id="db-storage-size" style="background: rgba(0,0,0,0.04); color: var(--text-primary); border: 1px solid var(--border-color); font-size: 0.75rem; display: inline-block;">Calculating...</span>
+          </div>
+          <button class="new-chat-btn" onclick="nukeIndexedDatabase()" style="background: var(--danger); color: #fff; font-weight: 700; justify-content: center; width: auto; height: 38px; margin-top: 20px;">
+            🛑 Nuke Cache & Reset
+          </button>
+        </div>
+
+        <!-- Tab 2: LAN API Sharing -->
+        <div class="settings-panel" id="settings-network">
+          <div class="cloning-card-header" style="border: none; padding: 0; margin-bottom: 20px;">
+            <h4 style="font-family: var(--font-title); font-size: 1.1rem;">LAN API Endpoint Sharing</h4>
+            <p>Connect third party python scripts and smartphones to your host workstation.</p>
+          </div>
+          <div class="form-group">
+            <label>Host LAN addresses</label>
+            <span class="mode-badge batch" id="host-lan-ip" style="background: rgba(39, 201, 63, 0.1); color: var(--dot-green); border: 1px solid rgba(39,201,63,0.2); font-size: 0.8rem; font-family: monospace; display: inline-block;">127.0.0.1:5000</span>
+            <p style="font-size: 0.7rem; color: var(--text-disabled); margin-top: 5px;">Use this IP address inside scripts running on other devices connected to the same Wi-Fi network.</p>
+          </div>
+
+          <div class="form-group">
+            <label>Python Network Script Example</label>
+            <div class="copy-code-block" id="py-network-snippet">
+              <button class="chat-action-btn" onclick="copyPythonCode()" style="position: absolute; right: 10px; top: 10px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; font-size: 0.65rem;">Copy</button>import requests
+
+url = "http://<span id="py-ip-ref">127.0.0.1</span>:5000/api/tts"
+payload = {
+    "text": "Greetings from the local network!",
+    "voice": "af_sarah",
+    "speed": 1.0
+}
+res = requests.post(url, json=payload)
+with open("lan_synthesis.wav", "wb") as f:
+    f.write(res.content)
+            </div>
+          </div>
+          <a href="http://localhost:5000/docs" target="_blank" style="font-size: 0.75rem; color: var(--dot-green); text-decoration: none; font-weight: 600;">
+            📖 Open Local Swagger Documentation & OpenAPI Playground UI ↗
+          </a>
+        </div>
+
+        <!-- Tab 3: Telemetry HUD -->
+        <div class="settings-panel" id="settings-telemetry">
+          <div class="cloning-card-header" style="border: none; padding: 0; margin-bottom: 20px;">
+            <h4 style="font-family: var(--font-title); font-size: 1.1rem;">Telemetry Hardware HUD</h4>
+            <p>Real-time telemetry dials for CPU, RAM, and server operations.</p>
+          </div>
+          <div class="telemetry-row">
+            <div class="telemetry-widget">
+              <div class="label">CPU Usage</div>
+              <div class="val" id="cpu-usage-settings">0%</div>
+            </div>
+            <div class="telemetry-widget">
+              <div class="label">RAM Usage</div>
+              <div class="val" id="ram-usage-settings">0%</div>
+            </div>
+          </div>
+          <button class="new-chat-btn" onclick="stopAllServices()" style="background: rgba(217, 45, 32, 0.1); color: var(--danger); border: 1px solid rgba(217, 45, 32, 0.2); font-weight: 700; height: 38px; margin-top: 15px;">
+            🛑 Shut Down All Speech Servers
+          </button>
+        </div>
+
+        <!-- Tab 4: Logs spreadsheet -->
+        <div class="settings-panel" id="settings-logs">
+          <div class="cloning-card-header" style="border: none; padding: 0; margin-bottom: 20px;">
+            <h4 style="font-family: var(--font-title); font-size: 1.1rem;">Global Log Audit</h4>
+            <p>Review every speech synthesized across all project chats.</p>
+          </div>
+          
+          <div class="batch-results-list" style="max-height: 260px; padding: 0;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.7rem; text-align: left;">
+              <thead>
+                <tr style="background: rgba(0,0,0,0.03); border-bottom: 1px solid var(--border-color);">
+                  <th style="padding: 8px 10px;">Time</th>
+                  <th style="padding: 8px 10px;">Voice</th>
+                  <th style="padding: 8px 10px;">Text</th>
+                  <th style="padding: 8px 10px;">Format</th>
+                </tr>
+              </thead>
+              <tbody id="settings-history-tbody">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast overlay -->
+  <div class="toast-panel" id="toast-container"></div>
+
+  <!-- Main Workstation Engine Script -->
+  <script>
+    // State Registers
+    let activeBackend = null;
+    let loadingEngine = null;
+    let localHostIp = "127.0.0.1";
+    let activeAppMode = "chat"; // 'chat', 'batch', 'cloning'
+    
+    // Project and Chat arrays
+    let chats = [];
+    let activeChat = null;
+    
+    let batchProjects = [];
+    let activeBatchProject = null;
+    
+    let customVoices = [];
+    let activeCustomVoice = null;
+    
+    // Per-mode model/voice configurations
+    let chatActiveModel = "kokoro";
+    let chatSelectedVoiceId = "";
+    
+    let batchActiveModel = "kokoro";
+    let batchSelectedVoiceId = "";
+    
+    let cloningActiveModel = "kokoro";
+    
+    // Global lists
+    let availableVoices = [];
+
+    // Local IndexedDB Database Controller
+    class AuraDB {
+      constructor() {
+        this.dbName = "AuraTTSWorkstationDB";
+        this.dbVersion = 2;
+        this.db = null;
+      }
+
+      init() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(this.dbName, this.dbVersion);
+          request.onerror = (e) => reject(e);
+          request.onsuccess = (e) => {
+            this.db = e.target.result;
+            resolve();
+          };
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains("chats")) {
+              db.createObjectStore("chats", { keyPath: "id" });
+            }
+            if (!db.objectStoreNames.contains("batch_projects")) {
+              db.createObjectStore("batch_projects", { keyPath: "id" });
+            }
+            if (!db.objectStoreNames.contains("voices")) {
+              db.createObjectStore("voices", { keyPath: "id" });
+            }
+          };
+        });
+      }
+
+      getChats() {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction("chats", "readonly");
+          const store = tx.objectStore("chats");
+          const request = store.getAll();
+          request.onsuccess = () => {
+            let data = request.result;
+            if (!data || data.length === 0) {
+              data = [{
+                id: "chat-default",
+                title: "Default Chat Workspace",
+                text: "",
+                voice: "",
+                speed: 1.0,
+                lang: "en",
+                format: "wav",
+                audios: []
+              }];
+              this.saveChat(data[0]);
+            }
+            resolve(data);
+          };
+        });
+      }
+
+      saveChat(chat) {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction("chats", "readwrite");
+          const store = tx.objectStore("chats");
+          store.put(chat);
+          tx.oncomplete = () => resolve();
+        });
+      }
+
+      deleteChat(id) {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction("chats", "readwrite");
+          const store = tx.objectStore("chats");
+          store.delete(id);
+          tx.oncomplete = () => resolve();
+        });
+      }
+
+      getBatchProjects() {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction("batch_projects", "readonly");
+          const store = tx.objectStore("batch_projects");
+          const request = store.getAll();
+          request.onsuccess = () => {
+            resolve(request.result || []);
+          };
+        });
+      }
+
+      saveBatchProject(project) {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction("batch_projects", "readwrite");
+          const store = tx.objectStore("batch_projects");
+          store.put(project);
+          tx.oncomplete = () => resolve();
+        });
+      }
+
+      deleteBatchProject(id) {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction("batch_projects", "readwrite");
+          const store = tx.objectStore("batch_projects");
+          store.delete(id);
+          tx.oncomplete = () => resolve();
+        });
+      }
+
+      getVoices() {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction("voices", "readonly");
+          const store = tx.objectStore("voices");
+          const request = store.getAll();
+          request.onsuccess = () => {
+            resolve(request.result || []);
+          };
+        });
+      }
+
+      saveVoice(voice) {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction("voices", "readwrite");
+          const store = tx.objectStore("voices");
+          store.put(voice);
+          tx.oncomplete = () => resolve();
+        });
+      }
+
+      deleteVoice(id) {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction("voices", "readwrite");
+          const store = tx.objectStore("voices");
+          store.delete(id);
+          tx.oncomplete = () => resolve();
+        });
+      }
+
+      clearAll() {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction("chats", "readwrite");
+          const store = tx.objectStore("chats");
+          store.clear();
+          tx.oncomplete = () => resolve();
+        });
+      }
+    }
+
+    const db = new AuraDB();
+
+    // Show custom toast notifications
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast-item ${type}`;
+      
+      let icon = 'ℹ️';
+      if (type === 'success') icon = '✅';
+      if (type === 'error') icon = '❌';
+      
+      toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // Black and white theme toggle implementation
+    function toggleTheme() {
+      document.body.classList.toggle('dark-theme');
+      const isDark = document.body.classList.contains('dark-theme');
+      localStorage.setItem('aura_theme', isDark ? 'dark' : 'light');
+      
+      const btn = document.getElementById('theme-toggle-btn');
+      if (isDark) {
+        btn.innerHTML = '◑';
+        btn.title = 'Switch to Light Mode';
+      } else {
+        btn.innerHTML = '◐';
+        btn.title = 'Switch to Dark Mode';
+      }
+    }
+
+    // Toggle Left Chats Drawer
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const restoreBtn = document.getElementById('sidebar-restore-btn');
+      
+      sidebar.classList.toggle('collapsed');
+      
+      if (sidebar.classList.contains('collapsed')) {
+        restoreBtn.style.display = '';
+      } else {
+        restoreBtn.style.display = 'none';
+      }
+    }
+
+    // Switch App Modes (Red: Chat, Yellow: Batch, Green: Cloning)
+    function switchAppMode(mode) {
+      activeAppMode = mode;
+      localStorage.setItem('aura_active_app_mode', mode);
+      
+      // Update Dot Highlights
+      document.querySelectorAll('.dot').forEach(el => el.classList.remove('active'));
+      document.getElementById(`dot-${mode}`).classList.add('active');
+      
+      // Update badge
+      const badge = document.getElementById('active-mode-badge');
+      if (badge) {
+        badge.className = `mode-badge ${mode}`;
+        badge.innerText = `${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode`;
+      }
+      
+      // Toggle View Displays
+      const chatFeed = document.getElementById('chat-feed-screen');
+      const chatSubmit = document.getElementById('chat-submit-footer');
+      const batchScreen = document.getElementById('batch-screen');
+      const cloningScreen = document.getElementById('cloning-screen');
+      
+      // Sidebar Swapping Elements
+      const sidebarBtn = document.getElementById('sidebar-new-action-btn');
+      const searchInput = document.getElementById('chat-search');
+      
+      if (mode === 'chat') {
+        if (chatFeed) chatFeed.style.display = 'flex';
+        if (chatSubmit) chatSubmit.style.display = 'block';
+        if (batchScreen) batchScreen.classList.remove('active');
+        if (cloningScreen) cloningScreen.classList.remove('active');
+        
+        if (sidebarBtn) {
+          sidebarBtn.innerHTML = '<i>📝</i> New Chat';
+          sidebarBtn.onclick = createNewChat;
+        }
+        if (searchInput) {
+          searchInput.placeholder = 'Search chats...';
+          searchInput.oninput = filterChats;
+        }
+        
+        renderChatsList();
+        if (activeChat) {
+          selectActiveChat(activeChat.id);
+        } else {
+          renderChatMessages();
+        }
+      } else if (mode === 'batch') {
+        if (chatFeed) chatFeed.style.display = 'none';
+        if (chatSubmit) chatSubmit.style.display = 'none';
+        if (batchScreen) batchScreen.classList.add('active');
+        if (cloningScreen) cloningScreen.classList.remove('active');
+        stopCardPlaybacks();
+        
+        if (sidebarBtn) {
+          sidebarBtn.innerHTML = '<i>📦</i> New Project';
+          sidebarBtn.onclick = createNewBatchProject;
+        }
+        if (searchInput) {
+          searchInput.placeholder = 'Search projects...';
+          searchInput.oninput = filterBatchProjects;
+        }
+        
+        renderBatchProjectsList();
+        if (activeBatchProject) {
+          selectActiveBatchProject(activeBatchProject.id);
+        } else {
+          renderBatchRows();
+        }
+      } else if (mode === 'cloning') {
+        if (chatFeed) chatFeed.style.display = 'none';
+        if (chatSubmit) chatSubmit.style.display = 'none';
+        if (batchScreen) batchScreen.classList.remove('active');
+        if (cloningScreen) cloningScreen.classList.add('active');
+        stopCardPlaybacks();
+        
+        if (sidebarBtn) {
+          sidebarBtn.innerHTML = '<i>🎙️</i> New Custom Voice';
+          sidebarBtn.onclick = openNewVoiceModal;
+        }
+        if (searchInput) {
+          searchInput.placeholder = 'Search voices...';
+          searchInput.oninput = filterCustomVoices;
+        }
+        
+        renderCustomVoicesList();
+        syncCloningUIVisibility();
+      }
+    }
+
+    // ==================== BATCH PROJECT SYSTEM HELPERS ====================
+
+    async function createNewBatchProject() {
+      const id = `batch-proj-${Date.now()}`;
+      const newObj = {
+        id: id,
+        title: `Batch Project #${batchProjects.length + 1}`,
+        engine: "kokoro",
+        lang: "en",
+        format: "wav",
+        rows: []
+      };
+      
+      batchProjects.push(newObj);
+      await db.saveBatchProject(newObj);
+      
+      renderBatchProjectsList();
+      await selectActiveBatchProject(id);
+      showToast(`Created Batch Project: ${newObj.title}`, 'success');
+    }
+
+    function renderBatchProjectsList() {
+      const list = document.getElementById('chats-list');
+      if (!list) return;
+      list.innerHTML = '';
+      
+      const query = document.getElementById('chat-search').value.toLowerCase().trim();
+      
+      batchProjects.forEach(bp => {
+        if (query && !bp.title.toLowerCase().includes(query)) return;
+        
+        const item = document.createElement('div');
+        item.className = `chat-item ${activeBatchProject && activeBatchProject.id === bp.id ? 'active' : ''}`;
+        item.id = `batch-proj-item-${bp.id}`;
+        item.onclick = () => selectActiveBatchProject(bp.id);
+        item.ondblclick = (e) => startRenameBatchProject(bp.id, e);
+        
+        item.innerHTML = `
+          <div class="chat-item-details">
+            <i>📦</i>
+            <span class="chat-item-title">${bp.title}</span>
+          </div>
+          <div class="chat-item-actions">
+            <button class="chat-action-btn" onclick="startRenameBatchProject('${bp.id}', event)" title="Rename project">✏️</button>
+            <button class="chat-action-btn delete" onclick="deleteBatchProjectWorkspace('${bp.id}', event)" title="Delete project">🗑️</button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    async function selectActiveBatchProject(id) {
+      stopCardPlaybacks();
+      
+      const active = batchProjects.find(bp => bp.id === id);
+      if (!active) return;
+      
+      activeBatchProject = active;
+      localStorage.setItem('aura_active_batch_id', id);
+      
+      document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+      const activeItem = document.getElementById(`batch-proj-item-${id}`);
+      if (activeItem) activeItem.classList.add('active');
+      
+      // Update engine dropdowns & language selections
+      const engineSel = document.getElementById('batch-engine-select');
+      const langSel = document.getElementById('batch-lang-select');
+      if (engineSel && active.engine) engineSel.value = active.engine;
+      if (langSel && active.lang) langSel.value = active.lang;
+      
+      // Re-trigger voices fetch based on new selection
+      await fetchVoices();
+      
+      // Render the row level view
+      renderBatchRows();
+    }
+
+    function startRenameBatchProject(id, event) {
+      event.stopPropagation();
+      const item = document.getElementById(`batch-proj-item-${id}`);
+      if (!item) return;
+      const titleSpan = item.querySelector('.chat-item-title');
+      const currentVal = titleSpan.innerText;
+      
+      titleSpan.style.display = 'none';
+      
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'chat-item-input';
+      input.value = currentVal;
+      
+      item.querySelector('.chat-item-details').appendChild(input);
+      input.focus();
+      input.select();
+      
+      const commitTitle = async () => {
+        const val = input.value.trim();
+        if (val && val !== currentVal) {
+          const target = batchProjects.find(bp => bp.id === id);
+          if (target) {
+            target.title = val;
+            await db.saveBatchProject(target);
+            titleSpan.innerText = val;
+          }
+        }
+        input.remove();
+        titleSpan.style.display = '';
+      };
+      
+      input.onblur = commitTitle;
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') commitTitle();
+        if (e.key === 'Escape') {
+          input.remove();
+          titleSpan.style.display = '';
+        }
+      };
+    }
+
+    async function deleteBatchProjectWorkspace(id, event) {
+      if (event) event.stopPropagation();
+      
+      if (!confirm("Are you sure you want to permanently delete this batch project?")) return;
+      
+      // Stop background processing jobs for this specific project if running
+      if (activeBatchBgJobs && activeBatchBgJobs[id]) {
+        delete activeBatchBgJobs[id];
+      }
+      
+      batchProjects = batchProjects.filter(bp => bp.id !== id);
+      await db.deleteBatchProject(id);
+      
+      if (activeBatchProject && activeBatchProject.id === id) {
+        activeBatchProject = batchProjects[0] || null;
+        if (activeBatchProject) {
+          localStorage.setItem('aura_active_batch_id', activeBatchProject.id);
+        } else {
+          localStorage.removeItem('aura_active_batch_id');
+        }
+      }
+      
+      renderBatchProjectsList();
+      if (activeBatchProject) {
+        selectActiveBatchProject(activeBatchProject.id);
+      } else {
+        renderBatchRows();
+      }
+      showToast("Batch project deleted", "info");
+    }
+
+    function filterBatchProjects() {
+      renderBatchProjectsList();
+    }
+
+    // ==================== CLONING MODE DYNAMIC SIDEBAR HELPERS ====================
+
+    function renderCustomVoicesList() {
+      const list = document.getElementById('chats-list');
+      if (!list) return;
+      list.innerHTML = '';
+      
+      const query = document.getElementById('chat-search').value.toLowerCase().trim();
+      
+      // 1. Divider for Cloned / Registered voices
+      const customTitle = document.createElement('div');
+      customTitle.className = 'sidebar-section-header';
+      customTitle.style.cssText = "font-size: 0.75rem; font-weight: 800; color: var(--accent-color); padding: 12px 10px 4px 10px; text-transform: uppercase; letter-spacing: 0.05em;";
+      customTitle.innerText = "Custom Speaker Timbres";
+      list.appendChild(customTitle);
+      
+      const customMatches = customVoices.filter(cv => !query || cv.name.toLowerCase().includes(query));
+      if (customMatches.length === 0) {
+        const noVal = document.createElement('div');
+        noVal.style.cssText = "font-size: 0.7rem; color: var(--text-disabled); padding: 8px 12px;";
+        noVal.innerText = "No custom voices registered.";
+        list.appendChild(noVal);
+      } else {
+        customMatches.forEach(cv => {
+          const item = document.createElement('div');
+          item.className = `chat-item ${activeCustomVoice && activeCustomVoice.id === cv.id ? 'active' : ''}`;
+          item.id = `custom-voice-item-${cv.id}`;
+          item.onclick = () => selectActiveCustomVoice(cv.id);
+          item.ondblclick = (e) => startRenameCustomVoice(cv.id, e);
+          
+          let icon = cv.type === 'mixed' ? '✨' : '🎙️';
+          item.innerHTML = `
+            <div class="chat-item-details">
+              <i>${icon}</i>
+              <span class="chat-item-title">${cv.name}</span>
+            </div>
+            <div class="chat-item-actions">
+              <button class="chat-action-btn" onclick="startRenameCustomVoice('${cv.id}', event)" title="Rename voice">✏️</button>
+              <button class="chat-action-btn delete" onclick="deleteCustomVoiceWorkspace('${cv.id}', event)" title="Delete voice">🗑️</button>
+            </div>
+          `;
+          list.appendChild(item);
+        });
+      }
+      
+      // 2. Divider for Standard / Built-in voices
+      const builtinTitle = document.createElement('div');
+      builtinTitle.className = 'sidebar-section-header';
+      builtinTitle.style.cssText = "font-size: 0.75rem; font-weight: 800; color: var(--text-secondary); padding: 16px 10px 4px 10px; text-transform: uppercase; letter-spacing: 0.05em;";
+      builtinTitle.innerText = "Built-in / Preset Voices";
+      list.appendChild(builtinTitle);
+      
+      const builtinMatches = availableVoices.filter(v => !v.cloned && (!query || v.name.toLowerCase().includes(query)));
+      if (builtinMatches.length === 0) {
+        const noVal = document.createElement('div');
+        noVal.style.cssText = "font-size: 0.7rem; color: var(--text-disabled); padding: 8px 12px;";
+        noVal.innerText = "No matching preset voices found.";
+        list.appendChild(noVal);
+      } else {
+        builtinMatches.forEach(v => {
+          const item = document.createElement('div');
+          item.className = `chat-item`;
+          item.style.cssText = "cursor: pointer; padding: 6px 10px; font-size: 0.8rem; opacity: 0.85;";
+          item.onclick = () => {
+            // Fill into forms for quick cloning/mixing base reference!
+            const mixA = document.getElementById('mix-voice-a');
+            const mixB = document.getElementById('mix-voice-b');
+            if (mixA) mixA.value = v.id;
+            showToast(`Selected base speaker reference: ${v.name}`, 'info');
+          };
+          item.innerHTML = `
+            <div class="chat-item-details" style="gap: 8px;">
+              <span style="font-size:0.75rem;">🗣️</span>
+              <span class="chat-item-title">${v.name} (${v.gender.charAt(0).toUpperCase()})</span>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-disabled); font-weight: 700; text-transform: uppercase; background: rgba(255,255,255,0.05); padding: 2px 5px; border-radius: 4px;">Preset</div>
+          `;
+          list.appendChild(item);
+        });
+      }
+    }
+
+    function selectActiveCustomVoice(id) {
+      const active = customVoices.find(cv => cv.id === id);
+      if (!active) return;
+      
+      activeCustomVoice = active;
+      localStorage.setItem('aura_active_voice_id', id);
+      
+      document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+      const activeItem = document.getElementById(`custom-voice-item-${id}`);
+      if (activeItem) activeItem.classList.add('active');
+      
+      // Populate Cloning inputs based on chosen voice parameters
+      const renameInput = document.getElementById('clone-speaker-name');
+      const mixRenameInput = document.getElementById('mix-voice-name');
+      if (renameInput) renameInput.value = active.name;
+      if (mixRenameInput) mixRenameInput.value = active.name;
+      
+      if (active.type === 'mixed') {
+        const mixA = document.getElementById('mix-voice-a');
+        const mixB = document.getElementById('mix-voice-b');
+        const slider = document.getElementById('mix-ratio-slider');
+        if (mixA && active.baseVoiceA) mixA.value = active.baseVoiceA;
+        if (mixB && active.baseVoiceB) mixB.value = active.baseVoiceB;
+        if (slider && active.weight !== undefined) {
+          slider.value = active.weight * 100;
+          updateBlendPercentages(slider.value);
+        }
+      }
+      
+      showToast(`Selected Registered Voice Style: ${active.name}`, 'info');
+    }
+
+    function startRenameCustomVoice(id, event) {
+      event.stopPropagation();
+      const item = document.getElementById(`custom-voice-item-${id}`);
+      if (!item) return;
+      const titleSpan = item.querySelector('.chat-item-title');
+      const currentVal = titleSpan.innerText;
+      
+      titleSpan.style.display = 'none';
+      
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'chat-item-input';
+      input.value = currentVal;
+      
+      item.querySelector('.chat-item-details').appendChild(input);
+      input.focus();
+      input.select();
+      
+      const commitTitle = async () => {
+        const val = input.value.trim();
+        if (val && val !== currentVal) {
+          const target = customVoices.find(cv => cv.id === id);
+          if (target) {
+            target.name = val;
+            await db.saveVoice(target);
+            titleSpan.innerText = val;
+          }
+        }
+        input.remove();
+        titleSpan.style.display = '';
+      };
+      
+      input.onblur = commitTitle;
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') commitTitle();
+        if (e.key === 'Escape') {
+          input.remove();
+          titleSpan.style.display = '';
+        }
+      };
+    }
+
+    async function deleteCustomVoiceWorkspace(id, event) {
+      if (event) event.stopPropagation();
+      
+      if (!confirm("Are you sure you want to permanently delete this custom speaker timbre?")) return;
+      
+      customVoices = customVoices.filter(cv => cv.id !== id);
+      await db.deleteVoice(id);
+      
+      if (activeCustomVoice && activeCustomVoice.id === id) {
+        activeCustomVoice = customVoices[0] || null;
+        if (activeCustomVoice) {
+          localStorage.setItem('aura_active_voice_id', activeCustomVoice.id);
+        } else {
+          localStorage.removeItem('aura_active_voice_id');
+        }
+      }
+      
+      renderCustomVoicesList();
+      showToast("Custom speaker timbre deleted", "info");
+    }
+
+    function openNewVoiceModal() {
+      // Clear forms and scroll to the cloner view
+      const name = document.getElementById('clone-speaker-name');
+      const mixName = document.getElementById('mix-voice-name');
+      if (name) name.value = '';
+      if (mixName) mixName.value = '';
+      
+      activeCustomVoice = null;
+      localStorage.removeItem('aura_active_voice_id');
+      document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+      
+      showToast("Form cleared! Enter parameters on the right to build a new Custom Voice style.", "info");
+    }
+
+    function filterCustomVoices() {
+      renderCustomVoicesList();
+    }
+
+    // ==================== WORKSPACE BOOTSTRAPPING ====================
+    
+    async function loadWorkspace() {
+      // Restore Light/Dark theme setting
+      const savedTheme = localStorage.getItem('aura_theme') || 'light';
+      const btn = document.getElementById('theme-toggle-btn');
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark-theme');
+        if (btn) {
+          btn.innerHTML = '◑';
+          btn.title = 'Switch to Light Mode';
+        }
+      } else {
+        document.body.classList.remove('dark-theme');
+        if (btn) {
+          btn.innerHTML = '◐';
+          btn.title = 'Switch to Dark Mode';
+        }
+      }
+
+      try {
+        await db.init();
+        
+        // 1. Load Chats
+        chats = await db.getChats();
+        chats.forEach(c => {
+          c.audios.forEach(item => {
+            if (item.audioBlob instanceof Blob) {
+              item.audioUrl = URL.createObjectURL(item.audioBlob);
+            }
+          });
+        });
+        
+        // 2. Load Batch Projects
+        batchProjects = await db.getBatchProjects();
+        batchProjects.forEach(bp => {
+          if (bp.rows) {
+            bp.rows.forEach(r => {
+              if (r.audioBlob instanceof Blob) {
+                r.audioUrl = URL.createObjectURL(r.audioBlob);
+              }
+            });
+          }
+        });
+        
+        // 3. Load Custom Voices
+        customVoices = await db.getVoices();
+        
+        // 4. Restore Mode & Active Item selections
+        const savedMode = localStorage.getItem('aura_active_app_mode') || 'chat';
+        
+        if (chats.length > 0) {
+          const lastChatId = localStorage.getItem('aura_active_chat_id') || chats[0].id;
+          let activeC = chats.find(c => c.id === lastChatId) || chats[0];
+          activeChat = activeC;
+          await selectActiveChat(activeC.id);
+        }
+        
+        if (batchProjects.length > 0) {
+          const lastBatchId = localStorage.getItem('aura_active_batch_id') || batchProjects[0].id;
+          activeBatchProject = batchProjects.find(bp => bp.id === lastBatchId) || batchProjects[0];
+        }
+        
+        if (customVoices.length > 0) {
+          const lastVoiceId = localStorage.getItem('aura_active_voice_id') || customVoices[0].id;
+          activeCustomVoice = customVoices.find(v => v.id === lastVoiceId) || customVoices[0];
+        }
+        
+        switchAppMode(savedMode);
+        
+        // Profile Name check
+        const profile = localStorage.getItem('aura_username') || "Aura Creator";
+        updateProfileName(profile, false);
+      } catch (err) {
+        console.error("Database bootstrapping failed:", err);
+      }
+    }
+
+    // Render Previous Chats in Left Sidebar
+    function renderChatsList() {
+      const list = document.getElementById('chats-list');
+      list.innerHTML = '';
+      
+      const query = document.getElementById('chat-search').value.toLowerCase().trim();
+      
+      chats.forEach(c => {
+        if (query && !c.title.toLowerCase().includes(query)) return;
+        
+        const item = document.createElement('div');
+        item.className = `chat-item ${activeChat && activeChat.id === c.id ? 'active' : ''}`;
+        item.id = `chat-item-${c.id}`;
+        item.onclick = () => selectActiveChat(c.id);
+        item.ondblclick = (e) => startRenameChat(c.id, e);
+        
+        item.innerHTML = `
+          <div class="chat-item-details">
+            <i>💬</i>
+            <span class="chat-item-title">${c.title}</span>
+          </div>
+          <div class="chat-item-actions">
+            <button class="chat-action-btn" onclick="startRenameChat('${c.id}', event)" title="Rename chat">✏️</button>
+            <button class="chat-action-btn delete" onclick="deleteChatWorkspace('${c.id}', event)" title="Delete chat">🗑️</button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    // Load active Chat and populate fields
+    async function selectActiveChat(id) {
+      stopCardPlaybacks();
+      
+      const active = chats.find(c => c.id === id);
+      if (!active) return;
+      
+      activeChat = active;
+      localStorage.setItem('aura_active_chat_id', id);
+      
+      document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+      const activeItem = document.getElementById(`chat-item-${id}`);
+      if (activeItem) activeItem.classList.add('active');
+      
+      document.getElementById('chat-title-header').innerText = active.title;
+      document.getElementById('submit-text-input').value = active.text;
+      
+      if (active.lang) {
+        document.getElementById('lang-select').value = active.lang;
+        document.getElementById('batch-lang-select').value = active.lang;
+      }
+      
+      // Select correct engines in dropdowns
+      const savedEngine = active.engine || "kokoro";
+      chatActiveModel = savedEngine;
+      batchActiveModel = savedEngine;
+      cloningActiveModel = savedEngine;
+      
+      document.getElementById('compact-engine-select').value = savedEngine;
+      document.getElementById('batch-engine-select').value = savedEngine;
+      document.getElementById('cloning-engine-select').value = savedEngine;
+      
+      await fetchVoices();
+      
+      if (active.voice) {
+        chatSelectedVoiceId = active.voice;
+        batchSelectedVoiceId = active.voice;
+        updateSelectedVoiceDisplay('chat');
+        updateSelectedVoiceDisplay('batch');
+      }
+      
+      renderChatMessages();
+    }
+
+    // Save active chat configuration changes on-the-fly
+    async function saveActiveChatSettings() {
+      if (!activeChat) return;
+      
+      activeChat.text = document.getElementById('submit-text-input').value;
+      activeChat.voice = chatSelectedVoiceId;
+      activeChat.engine = chatActiveModel;
+      activeChat.lang = document.getElementById('lang-select').value;
+      
+      await db.saveChat(activeChat);
+    }
+
+    // Create a new Chat
+    async function createNewChat() {
+      const id = `chat-${Date.now()}`;
+      const newObj = {
+        id: id,
+        title: `Chat Workspace #${chats.length + 1}`,
+        text: "",
+        voice: "",
+        engine: "kokoro",
+        speed: 1.0,
+        lang: "en",
+        format: "wav",
+        audios: []
+      };
+      
+      chats.push(newObj);
+      await db.saveChat(newObj);
+      
+      renderChatsList();
+      await selectActiveChat(id);
+      showToast(`Created chat ${newObj.title}`, 'success');
+      
+      document.getElementById('submit-text-input').focus();
+    }
+
+    // Double click to rename chats
+    function startRenameChat(id, event) {
+      event.stopPropagation();
+      const item = document.getElementById(`chat-item-${id}`);
+      const titleSpan = item.querySelector('.chat-item-title');
+      const currentVal = titleSpan.innerText;
+      
+      titleSpan.style.display = 'none';
+      
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'chat-item-input';
+      input.value = currentVal;
+      
+      item.querySelector('.chat-item-details').appendChild(input);
+      input.focus();
+      input.select();
+      
+      const commitTitle = async () => {
+        const val = input.value.trim();
+        if (val && val !== currentVal) {
+          const target = chats.find(c => c.id === id);
+          target.title = val;
+          await db.saveChat(target);
+          titleSpan.innerText = val;
+          if (activeChat && activeChat.id === id) {
+            document.getElementById('chat-title-header').innerText = val;
+          }
+        }
+        input.remove();
+        titleSpan.style.display = '';
+      };
+      
+      input.onblur = commitTitle;
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') commitTitle();
+        if (e.key === 'Escape') {
+          input.remove();
+          titleSpan.style.display = '';
+        }
+      };
+    }
+
+    // Delete a Chat session
+    async function deleteChatWorkspace(id, event) {
+      if (event) event.stopPropagation();
+      
+      if (chats.length <= 1) {
+        showToast("Cannot delete the only remaining chat workspace session", "error");
+        return;
+      }
+      
+      if (!confirm("Are you sure you want to permanently delete this chat session?")) return;
+      
+      await db.deleteChat(id);
+      
+      const target = chats.find(c => c.id === id);
+      target.audios.forEach(item => {
+        if (item.audioUrl) URL.revokeObjectURL(item.audioUrl);
+      });
+      
+      chats = chats.filter(c => c.id !== id);
+      renderChatsList();
+      
+      if (activeChat && activeChat.id === id) {
+        await selectActiveChat(chats[0].id);
+      }
+      showToast("Chat session deleted", "info");
+    }
+
+    // Filter Chat logs
+    function filterChats() {
+      renderChatsList();
+    }
+
+    // ==================== RENDERING PLAYGROUND FEED CHATS ====================
+
+    function renderChatMessages() {
+      const placeholder = document.getElementById('feed-placeholder');
+      const feed = document.getElementById('messages-list-wrapper');
+      
+      feed.innerHTML = '';
+      
+      if (!activeChat || !activeChat.audios || activeChat.audios.length === 0) {
+        placeholder.style.display = 'flex';
+        return;
+      }
+      
+      placeholder.style.display = 'none';
+      
+      activeChat.audios.forEach(audio => {
+        const userBubble = document.createElement('div');
+        userBubble.className = 'message-bubble user';
+        userBubble.innerHTML = `<div class="message-user-tag">${audio.textPrefix}</div>`;
+        feed.appendChild(userBubble);
+        
+        const aiBubble = document.createElement('div');
+        aiBubble.className = 'message-bubble ai';
+        aiBubble.id = `ai-msg-${audio.id}`;
+        
+        aiBubble.innerHTML = `
+          <div class="message-ai-wrapper">
+            <div class="ai-avatar">🦙</div>
+            <div class="ai-content">
+              <div class="ai-text">Generated offline with speaker <strong>${audio.voice}</strong></div>
+              
+              <!-- Completed player card -->
+              <div class="voice-wave-container complete">
+                <div class="mini-player-deck">
+                  <button class="mini-play-btn" id="play-btn-${audio.id}" onclick="toggleCardPlayback('${audio.id}', '${audio.audioUrl}')">▶</button>
+                  <div class="mini-timeline-track">
+                    <div class="mini-timeline" onclick="seekCardPlayback('${audio.id}', event)">
+                      <div class="mini-timeline-fill" id="timeline-fill-${audio.id}"></div>
+                    </div>
+                    <div class="mini-time-display">
+                      <span id="current-time-${audio.id}">0:00</span>
+                      <span id="duration-time-${audio.id}">0:00</span>
+                    </div>
+                  </div>
+                  <div class="mini-actions">
+                    <button class="mini-action-icon" onclick="downloadHistoryAudio('${audio.id}')" title="Download Audio">📥</button>
+                    <button class="mini-action-icon delete" onclick="deleteHistoryAudio('${audio.id}')" title="Remove Audio">🗑️</button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        `;
+        feed.appendChild(aiBubble);
+        
+        const temp = new Audio(audio.audioUrl);
+        temp.onloadedmetadata = () => {
+          const durationSpan = document.getElementById(`duration-time-${audio.id}`);
+          if (durationSpan) durationSpan.innerText = formatTime(temp.duration);
+        };
+      });
+      
+      scrollToBottom();
+      renderGlobalSettingsLogs();
+    }
+
+    function scrollToBottom() {
+      const container = document.getElementById('chat-feed-screen');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // ==================== SYSTEM ENGINE CONTROLLER ====================
+
+    async function checkStatus() {
+      try {
+        const response = await fetch('/api/status');
+        const data = await response.json();
+        
+        document.getElementById('cpu-usage-settings').innerText = `${data.system.cpu}%`;
+        document.getElementById('ram-usage-settings').innerText = `${data.system.ram}%`;
+        
+        if (data.system.local_ip && localHostIp !== data.system.local_ip) {
+          localHostIp = data.system.local_ip;
+          document.getElementById('host-lan-ip').innerText = `${localHostIp}:5000`;
+          document.getElementById('py-ip-ref').innerText = localHostIp;
+        }
+
+        // Live Header Indicator Dot update
+        const dot = document.getElementById('system-status-dot');
+        const text = document.getElementById('system-status-text');
+        if (data.active_backend) {
+          dot.classList.add('active');
+          text.innerText = data.active_backend.toUpperCase();
+        } else {
+          dot.classList.remove('active');
+          text.innerText = "OFFLINE";
+        }
+        
+        // Sync active state engine
+        if (data.active_backend !== activeBackend) {
+          activeBackend = data.active_backend;
+          
+          const langSelect = document.getElementById('lang-select');
+          const batchLangSelect = document.getElementById('batch-lang-select');
+          
+          // Language selection dropdowns are always visible for filtering across all engines
+          langSelect.style.display = '';
+          batchLangSelect.style.display = '';
+          
+          fetchVoices();
+          syncCloningUIVisibility();
+        }
+      } catch (err) {
+        console.error('Failed fetching server status telemetry:', err);
+      }
+    }
+
+    // Switch and load engine from ANY mode
+    async function triggerEngineSwitch(originMode) {
+      let targetEngine = "kokoro";
+      if (originMode === 'chat') {
+        targetEngine = document.getElementById('compact-engine-select').value;
+        chatActiveModel = targetEngine;
+      } else if (originMode === 'batch') {
+        targetEngine = document.getElementById('batch-engine-select').value;
+        batchActiveModel = targetEngine;
+      } else if (originMode === 'cloning') {
+        targetEngine = document.getElementById('cloning-engine-select').value;
+        cloningActiveModel = targetEngine;
+      }
+      
+      // Update other mode dropdowns to maintain visual alignment
+      document.getElementById('compact-engine-select').value = targetEngine;
+      document.getElementById('batch-engine-select').value = targetEngine;
+      document.getElementById('cloning-engine-select').value = targetEngine;
+      
+      if (activeBackend === targetEngine) return;
+      
+      showToast(`Loading speech engine ${targetEngine.toUpperCase()} locally offline...`, 'info');
+      
+      try {
+        const response = await fetch('/api/switch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ backend: targetEngine })
+        });
+        
+        if (response.ok) {
+          showToast(`Engine ${targetEngine.toUpperCase()} loaded and ready!`, 'success');
+          
+          // Save engine preference to active chat object
+          if (activeChat) {
+            activeChat.engine = targetEngine;
+            await db.saveChat(activeChat);
+          }
+        } else {
+          const err = await response.json();
+          showToast(`Failed loading engine: ${err.detail}`, 'error');
+        }
+      } catch (err) {
+        showToast('Server connection timeout during engine loading', 'error');
+      } finally {
+        await checkStatus();
+      }
+    }
+
+    // Stop all active processes
+    async function stopAllServices() {
+      if (!confirm('Are you sure you want to stop all running speech models?')) return;
+      showToast('Stopping servers...', 'warning');
+      try {
+        const response = await fetch('/api/switch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ backend: null })
+        });
+        if (response.ok) {
+          showToast('All speech engines stopped successfully.', 'success');
+        }
+      } catch (e) {
+        showToast('Server request failed', 'error');
+      } finally {
+        await checkStatus();
+      }
+    }
+
+    // ==================== KEYBOARD TRIGGERS & TEXT AREA HEIGHT ====================
+
+    function autoResizeTextarea(textarea) {
+      textarea.style.height = '24px';
+      textarea.style.height = (textarea.scrollHeight - 6) + 'px';
+    }
+
+    function handleInputKeydown(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        generateSpeech();
+      }
+    }
+
+    // ==================== SPEECH SYNTHESIS PIPELINE ====================
+
+    let activeAbortController = null;
+    let isGeneratingSpeech = false;
+    let currentAiBubbleId = null;
+    let currentAudioSource = null; // Track currently playing Audio element
+    let playQueue = [];
+    let isPlayLoopRunning = false;
+    let nextSentenceToFetch = 0;
+    let accumulatedAudioChunks = [];
+
+    function playSentenceBlob(blob) {
+      return new Promise((resolve) => {
+        if (!isGeneratingSpeech) {
+          resolve();
+          return;
+        }
+        
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        currentAudioSource = audio;
+        
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          currentAudioSource = null;
+          resolve();
+        };
+        
+        audio.onerror = (e) => {
+          console.error("Audio playback error:", e);
+          URL.revokeObjectURL(audioUrl);
+          currentAudioSource = null;
+          resolve();
+        };
+        
+        audio.play().catch(err => {
+          console.warn("Audio play interrupted or failed:", err);
+          currentAudioSource = null;
+          resolve();
+        });
+      });
+    }
+
+    async function startPlayLoop(cleanSentences, audioId, voice, lang, format) {
+      isPlayLoopRunning = true;
+      let currentPlayIndex = 0;
+      accumulatedAudioChunks = [];
+      
+      while (currentPlayIndex < cleanSentences.length && isGeneratingSpeech) {
+        const item = playQueue.find(x => x.index === currentPlayIndex);
+        if (!item) {
+          // Wait a tiny bit for the next sentence chunk to be fetched
+          await new Promise(resolve => setTimeout(resolve, 50));
+          continue;
+        }
+        
+        // Play this sentence chunk!
+        await playSentenceBlob(item.blob);
+        
+        accumulatedAudioChunks.push(item.blob);
+        currentPlayIndex++;
+      }
+      
+      isPlayLoopRunning = false;
+      
+      // If we finished playing everything and synthesis wasn't cancelled, compile & save final combined WAV!
+      if (isGeneratingSpeech && accumulatedAudioChunks.length > 0) {
+        try {
+          const finalBlob = await concatenateWavBlobs(accumulatedAudioChunks);
+          
+          const audioItem = {
+            id: audioId,
+            voice: voice + " (" + activeBackend.toUpperCase() + ")",
+            timestamp: new Date().toLocaleTimeString(),
+            textPrefix: cleanSentences.join(" ").substring(0, 120) + (cleanSentences.join(" ").length > 120 ? "..." : ""),
+            format: format,
+            audioBlob: finalBlob,
+            audioUrl: URL.createObjectURL(finalBlob)
+          };
+          
+          if (!activeChat.audios) activeChat.audios = [];
+          activeChat.audios.push(audioItem);
+          
+          await db.saveChat(activeChat);
+          
+          renderChatMessages();
+          showToast('Speech synthesized successfully!', 'success');
+          toggleCardPlayback(audioItem.id, audioItem.audioUrl);
+        } catch (e) {
+          console.error("Failed to compile final WAV:", e);
+          showToast("Generation completed, but failed to compile final WAV", "warning");
+        } finally {
+          cleanupSpeechState();
+        }
+      }
+    }
+
+    function concatenateWavBlobs(blobs) {
+      return new Promise((resolve) => {
+        const readers = blobs.map(b => {
+          return new Promise((res) => {
+            const r = new FileReader();
+            r.onload = () => res(new Uint8Array(r.result));
+            r.readAsArrayBuffer(b);
+          });
+        });
+        
+        Promise.all(readers).then((buffers) => {
+          if (buffers.length === 0) {
+            resolve(new Blob());
+            return;
+          }
+          if (buffers.length === 1) {
+            resolve(new Blob([buffers[0]], { type: 'audio/wav' }));
+            return;
+          }
+          
+          const masterHeader = buffers[0].subarray(0, 44);
+          const pcmChunks = [];
+          let totalPcmLength = 0;
+          
+          for (let i = 0; i < buffers.length; i++) {
+            if (buffers[i].length > 44) {
+              const pcm = buffers[i].subarray(44);
+              pcmChunks.push(pcm);
+              totalPcmLength += pcm.length;
+            }
+          }
+          
+          const totalWavLength = 44 + totalPcmLength;
+          const finalWavBytes = new Uint8Array(totalWavLength);
+          
+          finalWavBytes.set(masterHeader, 0);
+          
+          let offset = 44;
+          for (const chunk of pcmChunks) {
+            finalWavBytes.set(chunk, offset);
+            offset += chunk.length;
+          }
+          
+          const view = new DataView(finalWavBytes.buffer);
+          view.setUint32(4, totalWavLength - 8, true);
+          view.setUint32(40, totalPcmLength, true);
+          
+          resolve(new Blob([finalWavBytes], { type: 'audio/wav' }));
+        });
+      });
+    }
+
+    async function fetchNextSentence(cleanSentences, voice, lang, format) {
+      if (nextSentenceToFetch >= cleanSentences.length || !isGeneratingSpeech) {
+        return;
+      }
+      
+      const currentIdx = nextSentenceToFetch++;
+      const sentenceText = cleanSentences[currentIdx];
+      
+      try {
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: sentenceText, voice, speed: activeChat.speed, lang, format }),
+          signal: activeAbortController.signal
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        playQueue.push({ index: currentIdx, blob, text: sentenceText });
+        
+        // Auto-fetch next sentence in parallel immediately!
+        fetchNextSentence(cleanSentences, voice, lang, format);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error(`Sentence ${currentIdx} fetch failed:`, err);
+          // Insert empty buffer as fallback to prevent blocking play queue
+          const emptyWav = new Uint8Array(44);
+          playQueue.push({ index: currentIdx, blob: new Blob([emptyWav], { type: 'audio/wav' }), text: "" });
+          fetchNextSentence(cleanSentences, voice, lang, format);
+        }
+      }
+    }
+
+    function cleanupSpeechState() {
+      isGeneratingSpeech = false;
+      playQueue = [];
+      isPlayLoopRunning = false;
+      accumulatedAudioChunks = [];
+      nextSentenceToFetch = 0;
+      
+      if (currentAudioSource) {
+        try {
+          currentAudioSource.pause();
+        } catch (e) {}
+        currentAudioSource = null;
+      }
+      
+      const btn = document.getElementById('btn-submit');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '↑';
+        btn.classList.remove('generating');
+      }
+    }
+
+    function cancelSpeech() {
+      if (!isGeneratingSpeech) return;
+      
+      if (activeAbortController) {
+        activeAbortController.abort();
+      }
+      
+      cleanupSpeechState();
+      
+      if (currentAiBubbleId) {
+        const bubble = document.getElementById(currentAiBubbleId);
+        if (bubble) {
+          const txtEl = bubble.querySelector('.ai-text');
+          if (txtEl) txtEl.innerText = "Generation cancelled by user.";
+          const wave = bubble.querySelector('.voice-wave-container');
+          if (wave) wave.style.display = 'none';
+          bubble.classList.remove('loading');
+        }
+      }
+      
+      showToast("Speech generation cancelled", "info");
+    }
+
+    async function generateSpeech() {
+      if (isGeneratingSpeech) {
+        cancelSpeech();
+        return;
+      }
+
+      const textInput = document.getElementById('submit-text-input');
+      const text = textInput.value.trim();
+      const format = 'wav'; 
+      const lang = document.getElementById('lang-select').value;
+      const btn = document.getElementById('btn-submit');
+      
+      if (!text) {
+        showToast("Please enter a script text prompt to synthesize!", "error");
+        return;
+      }
+      
+      // Split sentences cleanly
+      const sentences = text.match(/[^.!?。！？\n]+[.!?。！？\n]*|\n+/g) || [text];
+      const cleanSentences = sentences.map(s => s.trim()).filter(s => s.length > 0);
+      
+      if (cleanSentences.length === 0) {
+        showToast("Please enter a valid text prompt!", "error");
+        return;
+      }
+      
+      // Transparent Auto-Boot
+      if (!activeBackend) {
+        const chosenEngine = document.getElementById('compact-engine-select').value;
+        showToast(`Auto-booting speech engine ${chosenEngine.toUpperCase()} offline...`, 'info');
+        
+        btn.disabled = true;
+        btn.innerHTML = '⏳';
+        
+        try {
+          const response = await fetch('/api/switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ backend: chosenEngine })
+          });
+          if (response.ok) {
+            activeBackend = chosenEngine;
+            await fetchVoices();
+            showToast(`Speech engine ${chosenEngine.toUpperCase()} ready!`, 'success');
+          } else {
+            const err = await response.json();
+            showToast(`Auto-boot failed: ${err.detail}`, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '↑';
+            return;
+          }
+        } catch (e) {
+          showToast('Server connection timeout during auto-boot', 'error');
+          btn.disabled = false;
+          btn.innerHTML = '↑';
+          return;
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '↑';
+        }
+      }
+      
+      const voice = chatSelectedVoiceId || (availableVoices.length > 0 ? availableVoices[0].id : null);
+      if (!voice) {
+        showToast("Please select a speaker voice style first!", "error");
+        toggleSpeakerPopup();
+        return;
+      }
+      
+      const audioId = `audio-${Date.now()}`;
+      currentAiBubbleId = `ai-msg-${audioId}`;
+      
+      const feed = document.getElementById('messages-list-wrapper');
+      const placeholder = document.getElementById('feed-placeholder');
+      placeholder.style.display = 'none';
+      
+      const userBubble = document.createElement('div');
+      userBubble.className = 'message-bubble user';
+      userBubble.innerHTML = `<div class="message-user-tag">${text}</div>`;
+      feed.appendChild(userBubble);
+      
+      const aiBubble = document.createElement('div');
+      aiBubble.className = 'message-bubble ai loading';
+      aiBubble.id = currentAiBubbleId;
+      
+      aiBubble.innerHTML = `
+        <div class="message-ai-wrapper">
+          <div class="ai-avatar">🦙</div>
+          <div class="ai-content">
+            <div class="ai-text">Synthesizing speech in real-time...</div>
+            <div class="voice-wave-container generating" id="wave-gen-${audioId}">
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      feed.appendChild(aiBubble);
+      scrollToBottom();
+      
+      textInput.value = '';
+      textInput.style.height = '24px';
+      
+      isGeneratingSpeech = true;
+      btn.disabled = false;
+      btn.innerHTML = '■';
+      btn.classList.add('generating');
+      
+      activeAbortController = new AbortController();
+      
+      // Start background fetching & play queue loops!
+      nextSentenceToFetch = 0;
+      playQueue = [];
+      
+      // Kickoff first sentence and pre-fetches in background
+      fetchNextSentence(cleanSentences, voice, lang, format);
+      // Kickoff sequential play loop
+      startPlayLoop(cleanSentences, audioId, voice, lang, format);
+    }
+
+    // ==================== SPEAKER OVERLAY FLOATING DIALOGS ====================
+
+    function toggleSpeakerPopup(event) {
+      if (event) event.stopPropagation();
+      const popup = document.getElementById('speaker-overlay');
+      popup.classList.toggle('active');
+      
+      // Close batch popup
+      const batchPopup = document.getElementById('batch-speaker-overlay');
+      if (batchPopup) batchPopup.classList.remove('active');
+    }
+
+    function toggleBatchSpeakerPopup(event) {
+      if (event) event.stopPropagation();
+      const popup = document.getElementById('batch-speaker-overlay');
+      popup.classList.toggle('active');
+      
+      // Close chat popup
+      const chatPopup = document.getElementById('speaker-overlay');
+      if (chatPopup) chatPopup.classList.remove('active');
+    }
+
+    document.addEventListener('click', () => {
+      const popup = document.getElementById('speaker-overlay');
+      if (popup) popup.classList.remove('active');
+      const batchPopup = document.getElementById('batch-speaker-overlay');
+      if (batchPopup) batchPopup.classList.remove('active');
+    });
+
+    async function fetchVoices() {
+      const list = document.getElementById('speaker-popup-list');
+      const batchList = document.getElementById('batch-speaker-popup-list');
+      
+      list.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">Loading...</span>';
+      batchList.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">Loading...</span>';
+      
+      try {
+        const response = await fetch('/api/voices');
+        const data = await response.json();
+        
+        if (data.voices && data.voices.length > 0) {
+          availableVoices = data.voices;
+        } else {
+          availableVoices = [];
+        }
+        
+        // Dynamic Integration: Merge custom voices from IndexedDB matching activeBackend!
+        if (db) {
+          try {
+            const dbVoices = await db.getAllVoices();
+            const matchingCustom = dbVoices
+              .filter(v => v.engine === activeBackend)
+              .map(v => ({
+                id: v.name, // The voice name/ID to match style directories
+                name: `${v.name} (Cloned)`,
+                gender: v.type === 'mixed' ? 'neutral' : 'neutral',
+                language: 'all',
+                cloned: true
+              }));
+              
+            const voiceIds = new Set(availableVoices.map(x => x.id));
+            matchingCustom.forEach(cv => {
+              if (!voiceIds.has(cv.id)) {
+                availableVoices.push(cv);
+              }
+            });
+          } catch (eDb) {
+            console.error("Failed to merge custom DB voices:", eDb);
+          }
+        }
+        
+        if (availableVoices.length > 0) {
+          // Setup active defaults if not set
+          if (!chatSelectedVoiceId) {
+            chatSelectedVoiceId = availableVoices[0].id;
+            batchSelectedVoiceId = availableVoices[0].id;
+          }
+          
+          renderVoices();
+          populateMixerDropdowns(availableVoices);
+        } else {
+          list.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">No voices</span>';
+          batchList.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">No voices</span>';
+        }
+      } catch (err) {
+        list.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">Fetch error</span>';
+        batchList.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">Fetch error</span>';
+      }
+    }
+
+    function renderVoices() {
+      const list = document.getElementById('speaker-popup-list');
+      const batchList = document.getElementById('batch-speaker-popup-list');
+      
+      if (!availableVoices || availableVoices.length === 0) {
+        list.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">No voices</span>';
+        batchList.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.7rem; padding: 6px 8px; display: block;">No voices</span>';
+        return;
+      }
+      
+      const chatLang = document.getElementById('lang-select').value;
+      const batchLang = document.getElementById('batch-lang-select').value;
+      
+      list.innerHTML = '';
+      batchList.innerHTML = '';
+      
+      // Filter Chat voices (allow 'all' and match chat selection)
+      const filteredChatVoices = availableVoices.filter(v => v.language === 'all' || v.language === chatLang);
+      filteredChatVoices.forEach(voice => {
+        const item = document.createElement('div');
+        item.className = `speaker-popup-item ${chatSelectedVoiceId === voice.id ? 'active' : ''}`;
+        
+        let badgesHtml = '';
+        if (voice.cloned) {
+          badgesHtml += `<span class="voice-badge cloned-badge">CLONED</span>`;
+        }
+        if (voice.language && voice.language !== 'all') {
+          badgesHtml += `<span class="voice-badge lang-badge">${voice.language.toUpperCase()}</span>`;
+        }
+        
+        item.innerHTML = `
+          <span class="voice-name-text">${voice.name} (${voice.gender.charAt(0).toUpperCase()})</span>
+          <div class="voice-badges-container">${badgesHtml}</div>
+        `;
+        
+        item.onclick = (e) => {
+          e.stopPropagation();
+          chatSelectedVoiceId = voice.id;
+          updateSelectedVoiceDisplay('chat');
+          saveActiveChatSettings();
+          toggleSpeakerPopup();
+        };
+        list.appendChild(item);
+      });
+      
+      if (filteredChatVoices.length === 0) {
+        list.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.75rem; padding: 12px 10px; display: block; text-align: center;">No voices for selected language</span>';
+      }
+      
+      // Filter Batch voices
+      const filteredBatchVoices = availableVoices.filter(v => v.language === 'all' || v.language === batchLang);
+      filteredBatchVoices.forEach(voice => {
+        const batchItem = document.createElement('div');
+        batchItem.className = `speaker-popup-item ${batchSelectedVoiceId === voice.id ? 'active' : ''}`;
+        
+        let badgesHtml = '';
+        if (voice.cloned) {
+          badgesHtml += `<span class="voice-badge cloned-badge">CLONED</span>`;
+        }
+        if (voice.language && voice.language !== 'all') {
+          badgesHtml += `<span class="voice-badge lang-badge">${voice.language.toUpperCase()}</span>`;
+        }
+        
+        batchItem.innerHTML = `
+          <span class="voice-name-text">${voice.name} (${voice.gender.charAt(0).toUpperCase()})</span>
+          <div class="voice-badges-container">${badgesHtml}</div>
+        `;
+        
+        batchItem.onclick = (e) => {
+          e.stopPropagation();
+          batchSelectedVoiceId = voice.id;
+          updateSelectedVoiceDisplay('batch');
+          toggleBatchSpeakerPopup();
+        };
+        batchList.appendChild(batchItem);
+      });
+      
+      if (filteredBatchVoices.length === 0) {
+        batchList.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.75rem; padding: 12px 10px; display: block; text-align: center;">No voices for selected language</span>';
+      }
+      
+      // Automatic fallback if selected voice doesn't match selected language
+      const activeChatVoice = filteredChatVoices.find(v => v.id === chatSelectedVoiceId);
+      if (!activeChatVoice && filteredChatVoices.length > 0) {
+        chatSelectedVoiceId = filteredChatVoices[0].id;
+        saveActiveChatSettings();
+      }
+      
+      const activeBatchVoice = filteredBatchVoices.find(v => v.id === batchSelectedVoiceId);
+      if (!activeBatchVoice && filteredBatchVoices.length > 0) {
+        batchSelectedVoiceId = filteredBatchVoices[0].id;
+      }
+      
+      updateSelectedVoiceDisplay('chat');
+      updateSelectedVoiceDisplay('batch');
+    }
+
+    function updateSelectedVoiceDisplay(origin) {
+      if (origin === 'chat') {
+        const trigger = document.getElementById('speaker-select-btn');
+        const voice = availableVoices.find(v => v.id === chatSelectedVoiceId);
+        if (voice) {
+          trigger.title = `Active Voice: ${voice.name} (${voice.gender})`;
+          trigger.innerHTML = `👤<span style="font-size: 0.6rem; font-weight: 700; position: absolute; bottom:-2px; background:var(--accent-color); color:var(--bg-chat); padding:1px 3px; border-radius:4px; transform: scale(0.9);">${voice.name.substring(0, 3)}</span>`;
+        }
+      } else if (origin === 'batch') {
+        const trigger = document.getElementById('batch-speaker-btn');
+        const voice = availableVoices.find(v => v.id === batchSelectedVoiceId);
+        if (voice) {
+          trigger.title = `Active Voice: ${voice.name} (${voice.gender})`;
+          trigger.innerHTML = `👤<span style="font-size: 0.6rem; font-weight: 700; position: absolute; bottom:-2px; background:var(--accent-color); color:var(--bg-chat); padding:1px 3px; border-radius:4px; transform: scale(0.9);">${voice.name.substring(0, 3)}</span>`;
+        }
+      }
+    }
+
+    // ==================== MULTI-CARD EXCLUSIVE PLAYER ====================
+
+    let activePlayAudio = null;
+    let activePlayAudioId = null;
+
+    function toggleCardPlayback(id, url) {
+      const btn = document.getElementById(`play-btn-${id}`);
+      const fill = document.getElementById(`timeline-fill-${id}`);
+      const currentSpan = document.getElementById(`current-time-${id}`);
+      
+      if (activePlayAudio && activePlayAudioId === id) {
+        if (activePlayAudio.paused) {
+          activePlayAudio.play();
+          btn.innerText = "❚❚";
+        } else {
+          activePlayAudio.pause();
+          btn.innerText = "▶";
+        }
+        return;
+      }
+      
+      stopCardPlaybacks();
+      
+      activePlayAudio = new Audio(url);
+      activePlayAudioId = id;
+      btn.innerText = "❚❚";
+      
+      activePlayAudio.play();
+      
+      activePlayAudio.ontimeupdate = () => {
+        if (!activePlayAudio) return;
+        const ratio = activePlayAudio.currentTime / activePlayAudio.duration;
+        if (fill) fill.style.width = `${ratio * 100}%`;
+        if (currentSpan) currentSpan.innerText = formatTime(activePlayAudio.currentTime);
+      };
+      
+      activePlayAudio.onended = () => {
+        btn.innerText = "▶";
+        if (fill) fill.style.width = "0%";
+        if (currentSpan) currentSpan.innerText = "0:00";
+        activePlayAudio = null;
+        activePlayAudioId = null;
+      };
+    }
+
+    function seekCardPlayback(id, event) {
+      if (activePlayAudio && activePlayAudioId === id) {
+        const timeline = event.currentTarget;
+        const rect = timeline.getBoundingClientRect();
+        const percent = (event.clientX - rect.left) / rect.width;
+        activePlayAudio.currentTime = percent * activePlayAudio.duration;
+      }
+    }
+
+    function stopCardPlaybacks() {
+      if (activePlayAudio) {
+        activePlayAudio.pause();
+        const oldBtn = document.getElementById(`play-btn-${activePlayAudioId}`);
+        const oldFill = document.getElementById(`timeline-fill-${activePlayAudioId}`);
+        const oldSpan = document.getElementById(`current-time-${activePlayAudioId}`);
+        
+        if (oldBtn) oldBtn.innerText = "▶";
+        if (oldFill) oldFill.style.width = "0%";
+        if (oldSpan) oldSpan.innerText = "0:00";
+        
+        activePlayAudio = null;
+        activePlayAudioId = null;
+      }
+    }
+
+    function downloadHistoryAudio(id) {
+      const audio = activeChat.audios.find(a => a.id === id);
+      if (!audio) return;
+      
+      const link = document.createElement('a');
+      link.href = audio.audioUrl;
+      link.download = `aura_${activeChat.title.toLowerCase().replace(/ /g, "_")}_speech.${audio.format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Downloaded audio clip successfully", "success");
+    }
+
+    async function deleteHistoryAudio(id) {
+      if (!confirm("Are you sure you want to permanently delete this speech clip from this chat history?")) return;
+      
+      stopCardPlaybacks();
+      
+      const audio = activeChat.audios.find(a => a.id === id);
+      if (audio && audio.audioUrl) {
+        URL.revokeObjectURL(audio.audioUrl);
+      }
+      
+      activeChat.audios = activeChat.audios.filter(a => a.id !== id);
+      await db.saveChat(activeChat);
+      
+      renderChatMessages();
+      showToast("Deleted speech card", "info");
+    }
+
+    // ==================== STATEFUL BATCH MODE PIPELINE ====================
+
+    let activeBatchBgJobs = {};
+    let batchAudioPlayers = {};
+
+    const batchDrop = document.getElementById('batch-dropzone');
+    
+    if (batchDrop) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        batchDrop.addEventListener(eventName, e => {
+          e.preventDefault();
+          batchDrop.classList.add('dragover');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        batchDrop.addEventListener(eventName, e => {
+          e.preventDefault();
+          batchDrop.classList.remove('dragover');
+        }, false);
+      });
+
+      batchDrop.addEventListener('drop', e => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          processBatchUploadFile(files[0]);
+        }
+      });
+    }
+
+    function handleBatchFileSelect(event) {
+      const file = event.target.files[0];
+      if (file) {
+        processBatchUploadFile(file);
+      }
+    }
+
+    async function processBatchUploadFile(file) {
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      if (ext !== '.txt' && ext !== '.csv') {
+        showToast('Invalid format! Please upload CSV or plain text script files', 'error');
+        return;
+      }
+      
+      // Auto-create batch project if none is active
+      if (!activeBatchProject) {
+        await createNewBatchProject();
+      }
+      
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const raw = e.target.result;
+        const newRows = [];
+        
+        if (ext === '.txt') {
+          const lines = raw.split('\n');
+          let idx = 1;
+          lines.forEach(line => {
+            const clean = line.trim();
+            if (clean) {
+              newRows.push({
+                id: `row-${Date.now()}-${idx}`,
+                index: idx,
+                text: clean,
+                voice: "", // default to active batch selected voice
+                status: 'pending',
+                audioBlob: null,
+                audioUrl: null
+              });
+              idx++;
+            }
+          });
+        } else if (ext === '.csv') {
+          const rows = raw.split('\n');
+          let idx = 1;
+          rows.forEach(row => {
+            const clean = row.trim();
+            if (clean) {
+              newRows.push({
+                id: `row-${Date.now()}-${idx}`,
+                index: idx,
+                text: clean,
+                voice: "",
+                status: 'pending',
+                audioBlob: null,
+                audioUrl: null
+              });
+              idx++;
+            }
+          });
+        }
+        
+        activeBatchProject.rows = newRows;
+        
+        // Default rows voice to active selected batch voice
+        const currentBatchVoice = batchSelectedVoiceId || (availableVoices[0] ? availableVoices[0].id : "");
+        activeBatchProject.rows.forEach(r => {
+          r.voice = currentBatchVoice;
+        });
+        
+        await db.saveBatchProject(activeBatchProject);
+        renderBatchProjectsList();
+        renderBatchRows();
+        
+        showToast(`Imported ${newRows.length} script rows into '${activeBatchProject.title}' successfully!`, 'success');
+      };
+      reader.readAsText(file);
+    }
+
+    function renderBatchRows() {
+      const container = document.getElementById('batch-items-rows-container');
+      const dropzone = document.getElementById('batch-dropzone');
+      const resultsPanel = document.getElementById('batch-results-panel');
+      const headerTitle = document.getElementById('batch-status-title');
+      const processBtn = document.getElementById('btn-process-batch');
+      
+      if (!container) return;
+      
+      if (!activeBatchProject || !activeBatchProject.rows || activeBatchProject.rows.length === 0) {
+        if (dropzone) dropzone.style.display = 'flex';
+        if (resultsPanel) resultsPanel.style.display = 'none';
+        if (dropzone) {
+          document.getElementById('batch-drop-text').innerText = "Drag & drop spreadsheet (.csv) or text files (.txt) here";
+        }
+        return;
+      }
+      
+      // Collapse dropzone completely and show results list
+      if (dropzone) dropzone.style.display = 'none';
+      if (resultsPanel) resultsPanel.style.display = 'block';
+      
+      // Render Header title with clean action
+      if (headerTitle) {
+        headerTitle.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <span>Parsed Script Rows (${activeBatchProject.rows.length})</span>
+            <button class="new-chat-btn" onclick="document.getElementById('batch-file-picker').click()" style="background: rgba(255,255,255,0.05); color: var(--text-primary); font-size: 0.75rem; padding: 4px 12px; height: auto; width: auto; font-weight: 700; border: 1px solid var(--border-color); border-radius: 6px;">
+              📂 Re-import File
+            </button>
+          </div>
+        `;
+      }
+      
+      // Update synthesis button text based on background process state
+      if (processBtn) {
+        if (activeBatchBgJobs[activeBatchProject.id]) {
+          processBtn.innerText = "■ Cancel Batch Synthesis";
+          processBtn.style.background = "var(--dot-red)";
+          processBtn.style.color = "#fff";
+        } else {
+          processBtn.innerText = "⚡ Start Batch Synthesis";
+          processBtn.style.background = "var(--dot-yellow)";
+          processBtn.style.color = "#000";
+        }
+      }
+      
+      container.innerHTML = '';
+      
+      // Prepare matching voices for dropdown selectors
+      const currentBatchLang = document.getElementById('batch-lang-select').value;
+      const filteredVoices = availableVoices.filter(v => v.language === 'all' || v.language === currentBatchLang);
+      
+      activeBatchProject.rows.forEach(item => {
+        const row = document.createElement('div');
+        row.className = `batch-item-row ${item.status}`;
+        row.style.cssText = "display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 12px 16px; margin-bottom: 10px; background: var(--bg-card); border-radius: var(--radius-md); border-left: 4px solid var(--border-color); transition: all var(--transition-normal);";
+        
+        if (item.status === 'processing') {
+          row.style.borderLeftColor = 'var(--dot-yellow)';
+        } else if (item.status === 'success') {
+          row.style.borderLeftColor = 'var(--dot-green)';
+        } else if (item.status === 'failed') {
+          row.style.borderLeftColor = 'var(--dot-red)';
+        }
+        
+        // Build individual voice dropdown selector
+        let selectHtml = `<select class="lang-pill-select" onchange="updateRowVoice('${item.id}', this.value)" style="width: 150px; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-primary); cursor: pointer;">`;
+        filteredVoices.forEach(v => {
+          selectHtml += `<option value="${v.id}" ${item.voice === v.id ? 'selected' : ''}>${v.name} (${v.gender.charAt(0)})</option>`;
+        });
+        selectHtml += `</select>`;
+        
+        let statusBadge = `<span style="font-size: 0.75rem; font-weight: 700; color: var(--text-disabled); text-transform: uppercase;">⏳ Pending</span>`;
+        if (item.status === 'processing') {
+          statusBadge = `<span style="font-size: 0.75rem; font-weight: 700; color: var(--dot-yellow); text-transform: uppercase; display: flex; align-items: center; gap: 6px;">🔄 Processing...</span>`;
+        } else if (item.status === 'success') {
+          statusBadge = `<span style="font-size: 0.75rem; font-weight: 700; color: var(--dot-green); text-transform: uppercase;">✅ Ready</span>`;
+        } else if (item.status === 'failed') {
+          statusBadge = `<span style="font-size: 0.75rem; font-weight: 700; color: var(--dot-red); text-transform: uppercase;">❌ Failed</span>`;
+        }
+        
+        let actionButtons = '';
+        if (item.status === 'success' && item.audioUrl) {
+          const isPlaying = batchAudioPlayers[item.id] && !batchAudioPlayers[item.id].paused;
+          actionButtons += `
+            <button class="chat-action-btn" onclick="togglePlayRowAudio('${item.id}', event)" title="Play Speech" style="background: rgba(255,255,255,0.08); font-size: 0.9rem; padding: 6px 10px; border-radius: 6px;">
+              ${isPlaying ? '⏸️' : '▶️'}
+            </button>
+            <button class="chat-action-btn" onclick="downloadRowAudio('${item.id}', event)" title="Download WAV" style="background: rgba(255,255,255,0.08); font-size: 0.9rem; padding: 6px 10px; border-radius: 6px;">
+              📥
+            </button>
+          `;
+        }
+        
+        row.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+            <span style="font-weight: 700; color: var(--text-disabled); font-size: 0.8rem;">#${item.index}</span>
+            <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1;">
+              <span class="chat-item-title" style="color: var(--text-primary); font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.text}">${item.text}</span>
+            </div>
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 15px; flex-shrink: 0;">
+            <!-- Speaker Timbre Dropdown -->
+            ${selectHtml}
+            
+            <!-- Status Badge -->
+            ${statusBadge}
+            
+            <!-- Playback actions -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+              ${actionButtons}
+              <button class="chat-action-btn delete" onclick="deleteRowFromBatch('${item.id}', event)" title="Delete Row" style="background: rgba(255,0,0,0.05); color: var(--dot-red); font-size: 0.9rem; padding: 6px 10px; border-radius: 6px;">
+                🗑️
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    async function updateRowVoice(rowId, voiceId) {
+      if (!activeBatchProject || !activeBatchProject.rows) return;
+      const row = activeBatchProject.rows.find(r => r.id === rowId);
+      if (row) {
+        row.voice = voiceId;
+        await db.saveBatchProject(activeBatchProject);
+      }
+    }
+
+    async function deleteRowFromBatch(rowId, event) {
+      if (event) event.stopPropagation();
+      if (!activeBatchProject || !activeBatchProject.rows) return;
+      
+      activeBatchProject.rows = activeBatchProject.rows.filter(r => r.id !== rowId);
+      
+      // Recalculate index
+      activeBatchProject.rows.forEach((r, idx) => {
+        r.index = idx + 1;
+      });
+      
+      await db.saveBatchProject(activeBatchProject);
+      renderBatchProjectsList();
+      renderBatchRows();
+      showToast("Row deleted from script", "info");
+    }
+
+    function togglePlayRowAudio(rowId, event) {
+      if (event) event.stopPropagation();
+      if (!activeBatchProject || !activeBatchProject.rows) return;
+      
+      const row = activeBatchProject.rows.find(r => r.id === rowId);
+      if (!row || !row.audioUrl) return;
+      
+      // Stop all active playbacks
+      Object.keys(batchAudioPlayers).forEach(k => {
+        if (k !== rowId && batchAudioPlayers[k]) {
+          batchAudioPlayers[k].pause();
+        }
+      });
+      stopCardPlaybacks(); // Stop any chat message playing too
+      
+      if (!batchAudioPlayers[rowId]) {
+        batchAudioPlayers[rowId] = new Audio(row.audioUrl);
+        batchAudioPlayers[rowId].onended = () => {
+          renderBatchRows();
+        };
+      }
+      
+      const player = batchAudioPlayers[rowId];
+      if (player.paused) {
+        player.play();
+        showToast("Playing row speech synthesis...", "success");
+      } else {
+        player.pause();
+      }
+      
+      renderBatchRows();
+    }
+
+    function downloadRowAudio(rowId, event) {
+      if (event) event.stopPropagation();
+      if (!activeBatchProject || !activeBatchProject.rows) return;
+      
+      const row = activeBatchProject.rows.find(r => r.id === rowId);
+      if (!row || !row.audioUrl) return;
+      
+      const link = document.createElement('a');
+      link.href = row.audioUrl;
+      link.download = `${activeBatchProject.title.replace(/\s+/g, '_')}_Row_${row.index}.wav`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    async function processBatchTTS() {
+      if (!activeBatchProject || !activeBatchProject.rows || activeBatchProject.rows.length === 0) {
+        showToast("Batch queue is currently empty! Please drop a file first.", "error");
+        return;
+      }
+
+      const projectId = activeBatchProject.id;
+
+      // Toggle Synthesis Loop cancel if active
+      if (activeBatchBgJobs[projectId]) {
+        delete activeBatchBgJobs[projectId];
+        
+        // Reset any processing rows back to pending
+        activeBatchProject.rows.forEach(r => {
+          if (r.status === 'processing') r.status = 'pending';
+        });
+        await db.saveBatchProject(activeBatchProject);
+        renderBatchRows();
+        
+        showToast("Batch synthesis execution paused.", "info");
+        return;
+      }
+      
+      // Save active selections to project
+      activeBatchProject.engine = document.getElementById('batch-engine-select').value;
+      activeBatchProject.lang = document.getElementById('batch-lang-select').value;
+      await db.saveBatchProject(activeBatchProject);
+      
+      const format = activeChat.format || 'wav';
+      const lang = activeBatchProject.lang;
+      const speed = activeChat.speed || 1.0;
+      
+      // Transparent Engine Swapping
+      if (activeBackend !== activeBatchProject.engine) {
+        const chosenEngine = activeBatchProject.engine;
+        showToast(`Auto-booting speech engine ${chosenEngine.toUpperCase()} offline...`, 'info');
+        
+        const processBtn = document.getElementById('btn-process-batch');
+        if (processBtn) {
+          processBtn.disabled = true;
+          processBtn.innerText = "⏳ Booting...";
+        }
+        
+        try {
+          const response = await fetch('/api/switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ backend: chosenEngine })
+          });
+          if (response.ok) {
+            activeBackend = chosenEngine;
+            await fetchVoices();
+            showToast(`Speech engine ${chosenEngine.toUpperCase()} ready!`, 'success');
+          } else {
+            const err = await response.json();
+            showToast(`Auto-boot failed: ${err.detail}`, 'error');
+            if (processBtn) {
+              processBtn.disabled = false;
+              processBtn.innerText = "⚡ Start Batch Synthesis";
+            }
+            return;
+          }
+        } catch (e) {
+          showToast('Server connection timeout during auto-boot', 'error');
+          if (processBtn) {
+            processBtn.disabled = false;
+            processBtn.innerText = "⚡ Start Batch Synthesis";
+          }
+          return;
+        } finally {
+          if (processBtn) processBtn.disabled = false;
+        }
+      }
+      
+      // Mark job as active
+      activeBatchBgJobs[projectId] = true;
+      renderBatchRows();
+      showToast(`Starting sequential batch synthesis for '${activeBatchProject.title}'...`, "info");
+      
+      // Background Sequential Synthesis loop!
+      for (let i = 0; i < activeBatchProject.rows.length; i++) {
+        // Stop if user paused this project synthesis
+        if (!activeBatchBgJobs[projectId]) break;
+        
+        const item = activeBatchProject.rows[i];
+        if (item.status === 'success' && item.audioUrl) continue;
+        
+        item.status = 'processing';
+        
+        // Re-render rows if this is still the active project
+        if (activeBatchProject && activeBatchProject.id === projectId) {
+          renderBatchRows();
+        }
+        
+        const rowVoice = item.voice || batchSelectedVoiceId || (availableVoices[0] ? availableVoices[0].id : "");
+        if (!rowVoice) {
+          item.status = 'failed';
+          if (activeBatchProject && activeBatchProject.id === projectId) renderBatchRows();
+          continue;
+        }
+        
+        try {
+          const response = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: item.text,
+              voice: rowVoice,
+              speed: speed,
+              lang: lang,
+              format: format
+            })
+          });
+          
+          if (response.ok) {
+            const blob = await response.blob();
+            item.audioBlob = blob;
+            item.audioUrl = URL.createObjectURL(blob);
+            item.status = 'success';
+          } else {
+            item.status = 'failed';
+          }
+        } catch (e) {
+          item.status = 'failed';
+        }
+        
+        // Persistent save
+        await db.saveBatchProject(activeBatchProject);
+        
+        // Live updates if viewing
+        if (activeBatchProject && activeBatchProject.id === projectId) {
+          renderBatchRows();
+        }
+      }
+      
+      // Job complete
+      delete activeBatchBgJobs[projectId];
+      if (activeBatchProject && activeBatchProject.id === projectId) {
+        renderBatchRows();
+        showToast(`Finished processing batch queue for project: '${activeBatchProject.title}'`, "success");
+      }
+    }
+
+    async function clearBatchQueue() {
+      if (!activeBatchProject) return;
+      if (!confirm("Are you sure you want to clear all rows in this batch project?")) return;
+      
+      activeBatchProject.rows = [];
+      await db.saveBatchProject(activeBatchProject);
+      renderBatchProjectsList();
+      renderBatchRows();
+      showToast("Batch project rows cleared", "info");
+    }
+
+    // ==================== VOICE CLONING MODE PIPELINE ====================
+
+    function syncCloningUIVisibility() {
+      const disabledScreen = document.getElementById('cloning-disabled-screen');
+      const activeGrid = document.getElementById('cloning-active-grid');
+      const pocketCard = document.getElementById('cloning-pocket-card');
+      const supertonicCard = document.getElementById('cloning-supertonic-card');
+      const jsonProfile = document.getElementById('json-profile-card');
+      
+      if (!activeBackend || activeBackend === 'kokoro') {
+        disabledScreen.style.display = 'flex';
+        activeGrid.style.display = 'none';
+      } else {
+        disabledScreen.style.display = 'none';
+        activeGrid.style.display = 'grid';
+        
+        if (activeBackend === 'pocket') {
+          pocketCard.style.display = 'block';
+          supertonicCard.style.display = 'none';
+          jsonProfile.style.display = 'none';
+        } else if (activeBackend === 'supertonic') {
+          pocketCard.style.display = 'none';
+          supertonicCard.style.display = 'block';
+          jsonProfile.style.display = 'block';
+          fetchCustomClonedVoices();
+        }
+      }
+    }
+
+    let selectedCloningAudioFile = null;
+    const cloningDrop = document.getElementById('cloning-drag-zone');
+    
+    if (cloningDrop) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        cloningDrop.addEventListener(eventName, e => {
+          e.preventDefault();
+          cloningDrop.classList.add('dragover');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        cloningDrop.addEventListener(eventName, e => {
+          e.preventDefault();
+          cloningDrop.classList.remove('dragover');
+        }, false);
+      });
+
+      cloningDrop.addEventListener('drop', e => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          processCloningAudioFile(files[0]);
+        }
+      });
+    }
+
+    function handleCloningAudioSelect(event) {
+      const file = event.target.files[0];
+      if (file) {
+        processCloningAudioFile(file);
+      }
+    }
+
+    function processCloningAudioFile(file) {
+      const allowed = ['.mp3', '.wav', '.ogg', '.flac'];
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      
+      if (!allowed.includes(ext)) {
+        showToast('Invalid audio format! Please upload WAV, MP3, OGG or FLAC', 'error');
+        return;
+      }
+      
+      selectedCloningAudioFile = file;
+      document.getElementById('cloning-drag-text').innerText = `Loaded: ${file.name}`;
+      
+      const clean = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_");
+      document.getElementById('clone-speaker-name').value = clean;
+    }
+
+    async function uploadVoiceCloningPrompt() {
+      const name = document.getElementById('clone-speaker-name').value.trim();
+      const lang = document.getElementById('clone-speaker-lang').value;
+      if (!selectedCloningAudioFile) {
+        showToast("Please drag & drop your speaker reference audio first!", "error");
+        return;
+      }
+      if (!name) {
+        showToast("Please enter a custom speaker name!", "error");
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('language', lang);
+      formData.append('file', selectedCloningAudioFile);
+      
+      showToast("Uploading prompt file & projecting voice timbre model...", "info");
+      
+      try {
+        const response = await fetch('/api/pocket/upload-voice', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          showToast(data.message, 'success');
+          
+          selectedCloningAudioFile = null;
+          document.getElementById('cloning-drag-text').innerText = "Drop reference audio (MP3, WAV, OGG)";
+          document.getElementById('clone-speaker-name').value = '';
+          
+          fetchVoices();
+        } else {
+          const err = await response.json();
+          showToast(`Cloning upload failed: ${err.detail}`, 'error');
+        }
+      } catch (e) {
+        showToast('Server connection lost during cloning upload', 'error');
+      }
+    }
+
+    // ==================== SUPERTONIC preset style mixing ====================
+
+    function updateBlendPercentages(val) {
+      document.getElementById('mix-percent-a').innerText = `Voice A (${100 - val}%)`;
+      document.getElementById('mix-percent-b').innerText = `Voice B (${val}%)`;
+    }
+
+    function populateMixerDropdowns(voices) {
+      const selectA = document.getElementById('mix-voice-a');
+      const selectB = document.getElementById('mix-voice-b');
+      
+      if (!selectA || !selectB) return;
+      
+      selectA.innerHTML = '';
+      selectB.innerHTML = '';
+      
+      voices.forEach(voice => {
+        const optA = document.createElement('option');
+        optA.value = voice.id;
+        optA.innerText = `${voice.name} (${voice.gender.charAt(0)})`;
+        selectA.appendChild(optA);
+        
+        const optB = document.createElement('option');
+        optB.value = voice.id;
+        optB.innerText = `${voice.name} (${voice.gender.charAt(0)})`;
+        selectB.appendChild(optB);
+      });
+      
+      if (voices.length > 1) {
+        selectB.selectedIndex = 1;
+      }
+    }
+
+    async function mixSupertonicVoices() {
+      const voiceA = document.getElementById('mix-voice-a').value;
+      const voiceB = document.getElementById('mix-voice-b').value;
+      const weight = parseFloat(document.getElementById('mix-ratio-slider').value) / 100.0;
+      const name = document.getElementById('mix-voice-name').value.trim();
+      
+      if (!name) {
+        showToast('Please enter a name for the blended speaker timbre!', 'error');
+        return;
+      }
+      
+      showToast('Blending presetted style vector timbres offline...', 'info');
+      
+      try {
+        const response = await fetch('/api/supertonic/mix', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ voice_a: voiceA, voice_b: voiceB, weight, name })
+        });
+        
+        if (response.ok) {
+          showToast(`Custom speaker '${name}' registered successfully!`, 'success');
+          document.getElementById('mix-voice-name').value = '';
+          
+          // Save Custom Voice into IndexedDB for dynamic sidebar management
+          const newVoiceObj = {
+            id: `voice-${Date.now()}`,
+            name: name,
+            type: 'mixed',
+            baseVoiceA: voiceA,
+            baseVoiceB: voiceB,
+            weight: weight,
+            engine: 'supertonic'
+          };
+          customVoices.push(newVoiceObj);
+          await db.saveVoice(newVoiceObj);
+          
+          renderCustomVoicesList();
+          fetchCustomClonedVoices();
+          fetchVoices();
+        } else {
+          const err = await response.json();
+          showToast(`Mixing failed: ${err.detail}`, 'error');
+        }
+      } catch (err) {
+        showToast('Server request failed', 'error');
+      }
+    }
+
+    async function fetchCustomClonedVoices() {
+      try {
+        const response = await fetch('/api/supertonic/custom-voices');
+        const data = await response.json();
+        const scroller = document.getElementById('custom-voices-list-cloning');
+        scroller.innerHTML = '';
+        
+        if (data.custom_voices && data.custom_voices.length > 0) {
+          data.custom_voices.forEach(voice => {
+            const badge = document.createElement('span');
+            badge.className = 'custom-voice-badge';
+            badge.innerText = voice;
+            scroller.appendChild(badge);
+          });
+        } else {
+          scroller.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.75rem;">No custom styles mixed yet.</span>';
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function uploadVoiceProfile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const name = prompt('Name this imported JSON profile:', file.name.replace('.json', ''));
+      if (!name) return;
+      
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('file', file);
+      
+      showToast('Uploading profile file...', 'info');
+      
+      try {
+        const response = await fetch('/api/supertonic/upload-voice', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          showToast(`Imported '${name}' style successfully!`, 'success');
+          
+          // Save Custom Cloned Voice into IndexedDB
+          const newVoiceObj = {
+            id: `voice-${Date.now()}`,
+            name: name,
+            type: 'cloned',
+            engine: 'supertonic'
+          };
+          customVoices.push(newVoiceObj);
+          await db.saveVoice(newVoiceObj);
+          
+          renderCustomVoicesList();
+          fetchCustomClonedVoices();
+          fetchVoices();
+        } else {
+          const err = await response.json();
+          showToast(`Import failed: ${err.detail}`, 'error');
+        }
+      } catch (err) {
+        showToast('Server request failed', 'error');
+      }
+    }
+
+    // ==================== OLLAMA MODAL SETTINGS POPUP ====================
+
+    function toggleSettingsModal(open) {
+      const modal = document.getElementById('settings-modal');
+      if (open) {
+        modal.classList.add('active');
+        calculateStorageUsage();
+        showSettingsTab('settings-general');
+      } else {
+        modal.classList.remove('active');
+      }
+    }
+
+    function closeSettingsOnClickOutside(event) {
+      if (event.target === document.getElementById('settings-modal')) {
+        toggleSettingsModal(false);
+      }
+    }
+
+    function showSettingsTab(tabId) {
+      document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.settings-nav-btn').forEach(b => b.classList.remove('active'));
+      
+      document.getElementById(tabId).classList.add('active');
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+    }
+
+    function calculateStorageUsage() {
+      const sizeSpan = document.getElementById('db-storage-size');
+      if (!navigator.storage || !navigator.storage.estimate) {
+        sizeSpan.innerText = "Sandbox Enabled";
+        return;
+      }
+      
+      navigator.storage.estimate().then(estimate => {
+        const mb = (estimate.usage / (1024 * 1024)).toFixed(2);
+        sizeSpan.innerText = `${mb} MB cached browser storage`;
+      });
+    }
+
+    function updateProfileName(name, save = true) {
+      const clean = name.trim() || "Aura Creator";
+      document.getElementById('user-display-name').innerText = clean;
+      if (save) {
+        localStorage.setItem('aura_username', clean);
+      }
+    }
+
+    async function nukeIndexedDatabase() {
+      if (!confirm("🚨 DANGER: Clear database reset? This is irreversible!")) return;
+      
+      stopCardPlaybacks();
+      await db.clearAll();
+      localStorage.clear();
+      
+      showToast("Workspace database cache wiped. Reloading workstation...", "success");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
+
+    function copyPythonCode() {
+      const text = document.getElementById('py-network-snippet').innerText.replace("Copy", "").trim();
+      navigator.clipboard.writeText(text).then(() => {
+        showToast("Code snippet copied to clipboard!", "success");
+      }).catch(e => {
+        showToast("Failed to copy code", "error");
+      });
+    }
+
+    function renderGlobalSettingsLogs() {
+      const tbody = document.getElementById('settings-history-tbody');
+      tbody.innerHTML = '';
+      
+      let all = [];
+      chats.forEach(c => {
+        c.audios.forEach(a => {
+          all.push({
+            chatTitle: c.title,
+            ...a
+          });
+        });
+      });
+      
+      all.sort((a,b) => b.id.localeCompare(a.id));
+      
+      if (all.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-disabled);">No global records found.</td></tr>`;
+        return;
+      }
+      
+      all.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="padding: 8px 10px; color:var(--text-secondary);">${item.timestamp}</td>
+          <td style="padding: 8px 10px;"><span class="mode-badge chat" style="font-size:0.65rem; background:rgba(0,0,0,0.02); border:1px solid var(--border-color); display:inline-block;">${item.voice}</span></td>
+          <td style="padding: 8px 10px; max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.textPrefix}</td>
+          <td style="padding: 8px 10px; text-transform:uppercase; color:var(--text-secondary);">${item.format}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function formatTime(seconds) {
+      if (isNaN(seconds) || seconds === Infinity) return "0:00";
+      const min = Math.floor(seconds / 60);
+      const sec = Math.floor(seconds % 60);
+      return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+    }
+
+    // Workspace entry point
+    window.onload = () => {
+      loadWorkspace();
+      checkStatus();
+      setInterval(checkStatus, 2500);
+    };
+  </script>
+</body>
+</html>

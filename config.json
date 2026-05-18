@@ -1,0 +1,17 @@
+{
+  "server": {
+    "host": "localhost",
+    "port": 8000
+  },
+  "paths": {
+    "voices_dir": "voices-celebrities",
+    "output_dir": "output"
+  },
+  "llm": {
+    "enabled": false,
+    "api_url": "http://localhost:8080/v1/chat/completions",
+    "api_key": "",
+    "model": "llama-3",
+    "system_prompt": "You are a helpful AI assistant. Keep your responses concise and natural."
+  }
+}

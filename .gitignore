@@ -1,0 +1,42 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+# Python Cache & System Files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.toast
+.cache/
+
+# Large Model Weights (automatically downloaded/cached during setup)
+*.pth
+*.pt
+*.bin
+*.onnx
+
+# Application Logs
+*.log
+kokoro.log
+pocket.log
+supertonic.log
+
+# Generated Audio Outputs
+*.wav
+*.mp3
+*.ogg
+*.flac
+outputs/
+output/
+
+# IDE / OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
