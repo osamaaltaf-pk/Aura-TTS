@@ -44,6 +44,12 @@ graph TD
 
 ## ⚡ Main Features
 
+### ⚡ True Sub-100ms Real-Time PCM Streaming Pipeline
+Bypasses traditional WAV header compilation bottlenecks. The orchestrator exposes a unified, chunk-by-clause `/api/tts/stream` endpoint proxy that streams raw 16-bit PCM bytes dynamically from Kokoro, Pocket, and Supertonic, ensuring instantaneous Time to First Byte (TTFB) playback.
+
+### 🎯 Robust Isolated Multi-Mode Cancellation
+Features multi-session `AbortController` tracking per chat playground and batch project. Historical playback operations (like playing or seeking cached audio cards) are fully isolated and **no longer** cancel active generation fetches or background synthesis tasks.
+
 ### 🗣️ Unified Speech Canvas (Chat Playground)
 Interactive workspace feed with real-time audio players, speed controls ($0.5\times$ to $2.0\times$), language-specific options, and seamless model hot-swapping.
 
@@ -111,6 +117,12 @@ venv\Scripts\python.exe central_server.py
 ```
 Once started, the CLI will output your local network endpoints, and the dashboard will automatically load at:
 👉 **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
+
+### 📊 Real-Time Latency Benchmarking
+To measure empirical performance, Time to First Byte (TTFB) percentiles, and Real-Time Factors (RTF) across all three local engines, run the automated benchmark script:
+```powershell
+& "venv\Scripts\python.exe" "scratch\benchmark_tts.py"
+```
 
 ---
 

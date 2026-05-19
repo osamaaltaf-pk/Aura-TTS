@@ -1,5 +1,10 @@
 import os
 import sys
+
+# High-Performance CPU Thread Optimization for PyTorch / ONNX / MKL
+os.environ["OMP_NUM_THREADS"] = "4"
+os.environ["MKL_NUM_THREADS"] = "4"
+
 import subprocess
 import time
 import json
@@ -176,10 +181,14 @@ def switch_backend(request: SwitchRequest):
     if not venv_python.exists():
         venv_python = sys.executable  # Fallback to current python interpreter
         
-    # Prepare environment with UTF-8 flags to prevent Windows UnicodeEncodeError crashes
+    # Prepare environment with UTF-8 flags and high-performance CPU thread optimizations to prevent Windows crashes and CPU core thrashing
     sub_env = os.environ.copy()
     sub_env["PYTHONIOENCODING"] = "utf-8"
     sub_env["PYTHONUTF8"] = "1"
+    sub_env["OMP_NUM_THREADS"] = "4"
+    sub_env["MKL_NUM_THREADS"] = "4"
+    sub_env["SUPERTONIC_INTRA_OP_THREADS"] = "4"
+    sub_env["SUPERTONIC_INTER_OP_THREADS"] = "2"
 
     try:
         if target == "kokoro":
@@ -490,78 +499,143 @@ def unified_tts(request: UnifiedTTSRequest):
         if not chunks:
             chunks = [request.text]
             
-        wav_buffers = []
+        import requests
+        from concurrent.futures import ThreadPoolExecutor
         
-        if active_backend == "kokoro":
-            for chunk in chunks:
+        def fetch_chunk(chunk_text: str) -> bytes:
+            if active_backend == "kokoro":
                 payload = {
-                    "text": chunk,
+                    "text": chunk_text,
                     "voice": request.voice,
                     "speed": request.speed,
                     "format": "wav"  # Internally request WAV for reliable binary concatenation
                 }
                 resp = requests.post(f"http://localhost:{port}/tts", json=payload, timeout=60)
                 if resp.status_code == 200:
-                    wav_buffers.append(resp.content)
-                else:
-                    raise HTTPException(status_code=resp.status_code, detail=resp.text)
-                    
-            final_wav = concatenate_wav_buffers(wav_buffers)
-            from io import BytesIO
-            return StreamingResponse(BytesIO(final_wav), media_type="audio/wav")
-            
-        elif active_backend == "pocket":
-            for chunk in chunks:
+                    return resp.content
+                raise HTTPException(status_code=resp.status_code, detail=resp.text)
+                
+            elif active_backend == "pocket":
                 payload = {
                     "model": "tts-1",
-                    "input": chunk,
+                    "input": chunk_text,
                     "voice": request.voice,
                     "response_format": "wav",  # Internally request WAV for reliable binary concatenation
                     "speed": request.speed
                 }
                 resp = requests.post(f"http://localhost:{port}/v1/audio/speech", json=payload, timeout=60)
                 if resp.status_code == 200:
-                    wav_buffers.append(resp.content)
-                else:
-                    raise HTTPException(status_code=resp.status_code, detail=resp.text)
-                    
-            final_wav = concatenate_wav_buffers(wav_buffers)
-            from io import BytesIO
-            return StreamingResponse(BytesIO(final_wav), media_type="audio/wav")
-            
-        elif active_backend == "supertonic":
-            for chunk in chunks:
+                    return resp.content
+                raise HTTPException(status_code=resp.status_code, detail=resp.text)
+                
+            elif active_backend == "supertonic":
                 chunk_payload = {
-                    "text": chunk,
+                    "text": chunk_text,
                     "voice": request.voice,
                     "lang": request.lang,
                     "speed": request.speed
                 }
                 resp = requests.post(f"http://localhost:{port}/v1/tts", json=chunk_payload, timeout=60)
                 if resp.status_code == 200:
-                    wav_buffers.append(resp.content)
-                else:
-                    # Fallback to OpenAI speech endpoint of Supertonic
-                    openai_payload = {
-                        "model": "supertonic-3",
-                        "input": chunk,
-                        "voice": request.voice,
-                        "response_format": "wav"
-                    }
-                    resp_fallback = requests.post(f"http://localhost:{port}/v1/audio/speech", json=openai_payload, timeout=60)
-                    if resp_fallback.status_code == 200:
-                        wav_buffers.append(resp_fallback.content)
-                    else:
-                        raise HTTPException(status_code=resp.status_code, detail=resp.text)
-                        
-            final_wav = concatenate_wav_buffers(wav_buffers)
-            from io import BytesIO
-            return StreamingResponse(BytesIO(final_wav), media_type="audio/wav")
+                    return resp.content
+                
+                # Fallback to OpenAI speech endpoint of Supertonic
+                openai_payload = {
+                    "model": "supertonic-3",
+                    "input": chunk_text,
+                    "voice": request.voice,
+                    "response_format": "wav"
+                }
+                resp_fallback = requests.post(f"http://localhost:{port}/v1/audio/speech", json=openai_payload, timeout=60)
+                if resp_fallback.status_code == 200:
+                    return resp_fallback.content
+                raise HTTPException(status_code=resp.status_code, detail=resp_fallback.text)
+            return b""
+
+        # Run all chunk generations concurrently inside a high-speed Python ThreadPoolExecutor!
+        with ThreadPoolExecutor(max_workers=min(4, len(chunks))) as executor:
+            futures = [executor.submit(fetch_chunk, c) for c in chunks]
+            wav_buffers = [f.result() for f in futures]
+            
+        final_wav = concatenate_wav_buffers(wav_buffers)
+        from io import BytesIO
+        return StreamingResponse(BytesIO(final_wav), media_type="audio/wav")
             
     except requests.exceptions.ConnectionError:
         raise HTTPException(status_code=503, detail="Active backend is unreachable. It may have crashed or is still initializing.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/tts/stream")
+async def unified_tts_stream(request: UnifiedTTSRequest):
+    """Proxy the streaming request to the currently active backend yielding raw 16-bit PCM chunks"""
+    global active_backend
+    if not active_backend:
+        raise HTTPException(status_code=400, detail="No active TTS backend loaded. Please select a backend first.")
+        
+    port = PORTS[active_backend]
+    
+    if active_backend == "kokoro":
+        payload = {
+            "text": request.text,
+            "voice": request.voice,
+            "speed": request.speed,
+            "format": "wav"
+        }
+        url = f"http://localhost:{port}/tts/stream"
+        
+    elif active_backend == "pocket":
+        payload = {
+            "model": "tts-1",
+            "input": request.text,
+            "voice": request.voice,
+            "response_format": "wav",
+            "speed": request.speed
+        }
+        url = f"http://localhost:{port}/tts/stream"
+        
+    elif active_backend == "supertonic":
+        # Since Supertonic has no direct PCM stream, we segment it and yield PCM chunk-by-chunk
+        chunks = split_text_into_chunks(request.text, max_len=200)
+        if not chunks:
+            chunks = [request.text]
+            
+        def supertonic_generator():
+            for c in chunks:
+                if not c.strip():
+                    continue
+                try:
+                    chunk_payload = {
+                        "text": c,
+                        "voice": request.voice,
+                        "lang": request.lang,
+                        "speed": request.speed
+                    }
+                    resp = requests.post(f"http://localhost:{port}/v1/tts", json=chunk_payload, timeout=30)
+                    if resp.status_code == 200:
+                        # Extract PCM from WAV (strip header)
+                        wav_data = resp.content
+                        if len(wav_data) > 44:
+                            yield wav_data[44:]
+                except Exception as e:
+                    print(f"[ERROR] Supertonic streaming segment failed: {e}")
+                    
+        return StreamingResponse(supertonic_generator(), media_type="audio/pcm")
+        
+    else:
+        raise HTTPException(status_code=400, detail="Unknown active backend.")
+        
+    # Standard proxy generator for Kokoro and Pocket
+    def stream_proxy():
+        import requests
+        with requests.post(url, json=payload, stream=True, timeout=60) as r:
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail="Backend failed to stream")
+            for chunk in r.iter_content(chunk_size=4096):
+                if chunk:
+                    yield chunk
+                    
+    return StreamingResponse(stream_proxy(), media_type="audio/pcm")
 
 # ==================== SUPERTONIC VOICE BUILDER & MIXER ====================
 

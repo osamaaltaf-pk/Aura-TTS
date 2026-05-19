@@ -2327,7 +2327,10 @@
       playQueue = [];
 
       // Kickoff first sentence and pre-fetches in background
-      fetchNextSentence(cleanSentences, voice, lang, format);
+      // Kickoff up to 3 parallel sentence fetches in background for a sliding look-ahead pipeline!
+      for (let k = 0; k < Math.min(3, cleanSentences.length); k++) {
+        fetchNextSentence(cleanSentences, voice, lang, format);
+      }
 
       // Start streaming playback at index 0 immediately!
       playStreamChunk(0);
@@ -2666,9 +2669,18 @@
     }
 
     function stopCardPlaybacks() {
-      // If a real-time stream is generating, cancel it when starting a historical playback
+      // If a real-time stream is generating, we only pause the preview playback instead of cancelling the background generation request!
       if (isGeneratingSpeech) {
-        cancelSpeech();
+        if (activeStreamAudioElement) {
+          try {
+            activeStreamAudioElement.pause();
+            activeStreamPlaying = false;
+            const playBtn = document.getElementById(`play-btn-${activeStreamAudioId}`);
+            if (playBtn) playBtn.innerText = "▶";
+            const waveContainer = document.getElementById(`wave-gen-${activeStreamAudioId}`);
+            if (waveContainer) waveContainer.classList.remove('generating');
+          } catch(e) {}
+        }
       }
 
       if (activePlayAudio) {
@@ -2720,6 +2732,7 @@
 
     let activeBatchBgJobs = {};
     let batchAudioPlayers = {};
+    let activeBatchAbortControllers = {};
 
     const batchDrop = document.getElementById('batch-dropzone');
 
@@ -3033,6 +3046,12 @@
       // Toggle Synthesis Loop cancel if active
       if (activeBatchBgJobs[projectId]) {
         delete activeBatchBgJobs[projectId];
+        if (activeBatchAbortControllers[projectId]) {
+          try {
+            activeBatchAbortControllers[projectId].abort();
+          } catch(e) {}
+          delete activeBatchAbortControllers[projectId];
+        }
 
         // Reset any processing rows back to pending
         activeBatchProject.rows.forEach(r => {
@@ -3098,6 +3117,7 @@
 
       // Mark job as active
       activeBatchBgJobs[projectId] = true;
+      activeBatchAbortControllers[projectId] = new AbortController();
       renderBatchRows();
       showToast(`Starting sequential batch synthesis for '${activeBatchProject.title}'...`, "info");
 
@@ -3133,7 +3153,8 @@
               speed: speed,
               lang: lang,
               format: format
-            })
+            }),
+            signal: activeBatchAbortControllers[projectId] ? activeBatchAbortControllers[projectId].signal : null
           });
 
           if (response.ok) {
@@ -3145,7 +3166,12 @@
             item.status = 'failed';
           }
         } catch (e) {
-          item.status = 'failed';
+          // Keep it pending/failed if aborted/failed
+          if (activeBatchBgJobs[projectId]) {
+            item.status = 'failed';
+          } else {
+            item.status = 'pending';
+          }
         }
 
         // Persistent save
@@ -3159,6 +3185,9 @@
 
       // Job complete
       delete activeBatchBgJobs[projectId];
+      if (activeBatchAbortControllers[projectId]) {
+        delete activeBatchAbortControllers[projectId];
+      }
       if (activeBatchProject && activeBatchProject.id === projectId) {
         renderBatchRows();
         showToast(`Finished processing batch queue for project: '${activeBatchProject.title}'`, "success");

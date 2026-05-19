@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+import os
+
+# High-Performance CPU Thread Optimization for ONNX / MKL / OpenMP
+os.environ["OMP_NUM_THREADS"] = "4"
+os.environ["MKL_NUM_THREADS"] = "4"
+
 """
 Pocket TTS - Enhanced API Server with OpenAI Compatibility
 Provides TTS endpoints and voice chat functionality with LLM integration
@@ -370,23 +376,36 @@ async def create_speech(request: OpenAITTSRequest):
                 print(f"[WARNING] Failed to load voice state: {e}")
 
         if not voice_state:
-            # Use default voice if available
-            if "default" in voice_states:
-                voice_state = voice_states["default"]
-            else:
-                raise HTTPException(
-                    status_code=400, detail=f"Voice '{request.voice}' not found"
-                )
+            # Fall back to first available voice in available_voices
+            if available_voices:
+                fallback_voice = list(available_voices.keys())[0]
+                print(f"[INFO] Voice '{request.voice}' not found. Falling back to first available voice: '{fallback_voice}'")
+                voice_file = available_voices[fallback_voice]["file"]
+                try:
+                    voice_state = tts_model.get_state_for_audio_prompt(voice_file)
+                    voice_states[request.voice] = voice_state
+                except Exception as e:
+                    print(f"[WARNING] Failed to load fallback voice state: {e}")
+            
+            # Last resort: use default voice if available
+            if not voice_state:
+                if "default" in voice_states:
+                    voice_state = voice_states["default"]
+                else:
+                    raise HTTPException(
+                        status_code=400, detail=f"Voice '{request.voice}' not found and no fallback voice available."
+                    )
 
         # Generate audio
         audio = tts_model.generate_audio(voice_state, request.input)
 
-        # Convert to WAV
+        # Convert to standard 16-bit PCM to guarantee HTML5 browser player compatibility
         audio_np = audio.numpy()
+        audio_int16 = (audio_np * 32767).clip(-32768, 32767).astype(np.int16)
 
         # Create WAV file in memory
         wav_buffer = io.BytesIO()
-        scipy.io.wavfile.write(wav_buffer, tts_model.sample_rate, audio_np)
+        scipy.io.wavfile.write(wav_buffer, tts_model.sample_rate, audio_int16)
         wav_buffer.seek(0)
         audio_data = wav_buffer.read()
 
@@ -418,6 +437,72 @@ async def create_speech(request: OpenAITTSRequest):
         print(f"[ERROR] TTS generation failed: {e}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"TTS generation failed: {str(e)}")
+
+
+@app.post("/tts/stream")
+async def generate_pocket_stream(request: OpenAITTSRequest):
+    """Generate and stream speech segment-by-segment in raw 16-bit PCM format for ultra-low latency"""
+    if not tts_model:
+        raise HTTPException(status_code=503, detail="TTS service not available.")
+        
+    try:
+        # Load voice state
+        voice_state = None
+        if request.voice in voice_states:
+            voice_state = voice_states[request.voice]
+        elif request.voice in available_voices:
+            voice_file = available_voices[request.voice]["file"]
+            try:
+                voice_state = tts_model.get_state_for_audio_prompt(voice_file)
+                voice_states[request.voice] = voice_state
+            except Exception as e:
+                print(f"[WARNING] Failed to load voice state: {e}")
+                
+        if not voice_state:
+            # Fall back to first available voice in available_voices
+            if available_voices:
+                fallback_voice = list(available_voices.keys())[0]
+                print(f"[INFO] Voice '{request.voice}' not found. Falling back to first available voice: '{fallback_voice}'")
+                voice_file = available_voices[fallback_voice]["file"]
+                try:
+                    voice_state = tts_model.get_state_for_audio_prompt(voice_file)
+                    voice_states[request.voice] = voice_state
+                except Exception as e:
+                    print(f"[WARNING] Failed to load fallback voice state: {e}")
+            
+            # Last resort: use default voice if available
+            if not voice_state:
+                if "default" in voice_states:
+                    voice_state = voice_states["default"]
+                else:
+                    raise HTTPException(
+                        status_code=400, detail=f"Voice '{request.voice}' not found and no fallback voice available."
+                    )
+                
+        # Split text into sentences for real-time chunked execution
+        sentences = split_into_sentences(request.input)
+        if not sentences:
+            sentences = [request.input]
+            
+        def pcm_generator():
+            for sentence in sentences:
+                if not sentence.strip():
+                    continue
+                try:
+                    # Generate audio
+                    audio = tts_model.generate_audio(voice_state, sentence)
+                    audio_np = audio.numpy()
+                    # Scale to standard 16-bit PCM
+                    audio_int16 = (audio_np * 32767).clip(-32768, 32767).astype(np.int16)
+                    # Yield raw PCM bytes
+                    yield audio_int16.tobytes()
+                except Exception as e:
+                    print(f"[ERROR] Error generating chunk: {e}")
+                    
+        return StreamingResponse(pcm_generator(), media_type="audio/pcm")
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/v1/audio/voices")
@@ -655,11 +740,14 @@ def generate_sentence_audio_sync(voice_state, sentence):
     """Generate audio for a single sentence (synchronous version for thread pool)"""
     try:
         audio = tts_model.generate_audio(voice_state, sentence)
+        
+        # Convert to standard 16-bit PCM to guarantee HTML5 browser player compatibility
         audio_np = audio.numpy()
+        audio_int16 = (audio_np * 32767).clip(-32768, 32767).astype(np.int16)
 
         # Convert to WAV
         wav_buffer = io.BytesIO()
-        scipy.io.wavfile.write(wav_buffer, tts_model.sample_rate, audio_np)
+        scipy.io.wavfile.write(wav_buffer, tts_model.sample_rate, audio_int16)
         wav_buffer.seek(0)
         audio_bytes = wav_buffer.read()
 
@@ -823,11 +911,14 @@ async def chat_completions(request: VoiceChatRequest):
             if voice_state:
                 try:
                     audio = tts_model.generate_audio(voice_state, response_text)
+                    
+                    # Convert to standard 16-bit PCM to guarantee HTML5 browser player compatibility
                     audio_np = audio.numpy()
+                    audio_int16 = (audio_np * 32767).clip(-32768, 32767).astype(np.int16)
 
                     # Convert to WAV in memory
                     wav_buffer = io.BytesIO()
-                    scipy.io.wavfile.write(wav_buffer, tts_model.sample_rate, audio_np)
+                    scipy.io.wavfile.write(wav_buffer, tts_model.sample_rate, audio_int16)
                     wav_buffer.seek(0)
                     audio_bytes = wav_buffer.read()
 

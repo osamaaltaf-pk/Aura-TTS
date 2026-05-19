@@ -321,6 +321,11 @@ def load_text_processor(onnx_dir: str) -> UnicodeProcessor:
 
 def load_text_to_speech(onnx_dir: str, use_gpu: bool = False) -> TextToSpeech:
     opts = ort.SessionOptions()
+    opts.intra_op_num_threads = int(os.environ.get("SUPERTONIC_INTRA_OP_THREADS", "4"))
+    opts.inter_op_num_threads = int(os.environ.get("SUPERTONIC_INTER_OP_THREADS", "2"))
+    opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+    opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+    
     if use_gpu:
         raise NotImplementedError("GPU mode is not fully tested")
     else:

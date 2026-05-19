@@ -1,7 +1,19 @@
 import os
 import sys
+
+# High-Performance CPU Thread Optimization for PyTorch / ONNX / MKL
+os.environ["OMP_NUM_THREADS"] = "4"
+os.environ["MKL_NUM_THREADS"] = "4"
+
 from pathlib import Path
 import torch
+
+if torch.cuda.is_available():
+    torch.set_num_threads(1)
+else:
+    torch.set_num_threads(min(4, os.cpu_count() or 4))
+    torch.set_num_interop_threads(2)
+
 import numpy as np
 import soundfile as sf
 from pydub import AudioSegment
@@ -117,15 +129,17 @@ def generate_tts(request: TTSRequest):
         pipeline = get_pipeline_for_voice(request.voice)
         
         # Generate speech
+        # Generate speech
         print(f"[INFO] Synthesizing '{request.text[:40]}...' with voice '{request.voice}'")
-        generator = pipeline(request.text, voice=str(voice_path), speed=request.speed, split_pattern=r'\n+')
         
         all_audio = []
-        for gs, ps, audio in generator:
-            if audio is not None:
-                if isinstance(audio, np.ndarray):
-                    audio = torch.from_numpy(audio).float()
-                all_audio.append(audio)
+        with torch.inference_mode():
+            generator = pipeline(request.text, voice=str(voice_path), speed=request.speed, split_pattern=r'\n+')
+            for gs, ps, audio in generator:
+                if audio is not None:
+                    if isinstance(audio, np.ndarray):
+                        audio = torch.from_numpy(audio).float()
+                    all_audio.append(audio)
         
         if not all_audio:
             raise HTTPException(status_code=500, detail="Speech generation failed")
@@ -170,6 +184,41 @@ def generate_tts(request: TTSRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"TTS generation error: {str(e)}")
+
+@app.post("/tts/stream")
+def generate_tts_stream(request: TTSRequest):
+    """Generate and stream speech segment-by-segment in raw 16-bit PCM format for ultra-low latency"""
+    global model
+    try:
+        if not request.text or not request.text.strip():
+            raise HTTPException(status_code=400, detail="Text cannot be empty")
+        
+        voice_path = get_safe_voice_path(request.voice)
+        if not voice_path.exists():
+            raise HTTPException(status_code=404, detail=f"Voice '{request.voice}' not found")
+        
+        pipeline = get_pipeline_for_voice(request.voice)
+        
+        def audio_generator():
+            with torch.inference_mode():
+                # Split text by clauses/newlines for highly granular streaming chunks
+                generator = pipeline(request.text, voice=str(voice_path), speed=request.speed, split_pattern=r'(?<=[.!?。！？\n])\s+|\n+')
+                for gs, ps, audio in generator:
+                    if audio is not None:
+                        if isinstance(audio, torch.Tensor):
+                            audio = audio.cpu().numpy()
+                        elif isinstance(audio, np.ndarray):
+                            pass
+                        else:
+                            continue
+                        # Convert to standard 16-bit PCM for browser AudioContext consumption
+                        audio_int16 = (audio * 32767).clip(-32768, 32767).astype(np.int16)
+                        yield audio_int16.tobytes()
+                        
+        return StreamingResponse(audio_generator(), media_type="audio/pcm")
+    except Exception as e:
+        print(f"[ERROR] Stream synthesis failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Stream synthesis error: {str(e)}")
 
 @app.get("/health")
 def health():
