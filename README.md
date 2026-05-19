@@ -44,6 +44,12 @@ graph TD
 
 ## ⚡ Main Features
 
+### 🎨 Premium UI/UX Workstation Workspace
+Features a unified, glassmorphic workstation dashboard optimized for daily content operations. Contains dynamic tab/workspace titles that sync automatically on renames, strict engine-specific Cloning voice filtering, and a sleek, self-contained **Sidebar-Integrated Timbre Testing Deck** with inline synthesis text prompt entry and seekable audio cards.
+
+### 🛡️ Dual-Stack Localhost socket validation
+Ensures robust server state monitoring on Windows architectures by conducting dual-stack socket checks on both IPv4 (`127.0.0.1`) and IPv6 (`::1`) loopback addresses, preventing server binding conflicts and socket lockouts.
+
 ### ⚡ True Sub-100ms Real-Time PCM Streaming Pipeline
 Bypasses traditional WAV header compilation bottlenecks. The orchestrator exposes a unified, chunk-by-clause `/api/tts/stream` endpoint proxy that streams raw 16-bit PCM bytes dynamically from Kokoro, Pocket, and Supertonic, ensuring instantaneous Time to First Byte (TTFB) playback.
 
@@ -123,6 +129,20 @@ To measure empirical performance, Time to First Byte (TTFB) percentiles, and Rea
 ```powershell
 & "venv\Scripts\python.exe" "scratch\benchmark_tts.py"
 ```
+
+### 🧪 Programmatic LAN Integration & Testing Suite
+To validate the entire orchestrator, dual-stack localhost port configurations, and voice generation capacity dynamically over standard LAN endpoints, run:
+```powershell
+& "venv\Scripts\python.exe" "test_LAN.py"
+```
+*What the programmatic test suite automates:*
+1. **Network Discovery**: Queries the central FastAPI orchestrator's `/api/status` endpoint to locate local network and loopback interface bindings.
+2. **Sequential Model Swapping**: Triggers API switches via `/api/switch` to warm-load the three neural engines (`kokoro`, `pocket`, `supertonic`) sequentially, verifying they stabilize and bind cleanly to their respective backend ports.
+3. **Voice Manifest Verification**: Queries `/api/voices` for each loaded backend to list all available standard and custom voice styles.
+4. **Speech Generation Verification**: Automatically initiates unified POST `/api/tts` requests to synthesize text speech, captures raw binary streams, and writes them locally as high-fidelity WAV files for visual/auditory validation:
+   - `output_kokoro.wav`
+   - `output_pocket.wav`
+   - `output_supertonic.wav`
 
 ---
 
