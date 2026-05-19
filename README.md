@@ -44,6 +44,12 @@ graph TD
 
 ## ⚡ Main Features
 
+### ⚡ True Sub-100ms Real-Time PCM Streaming Pipeline
+Bypasses traditional WAV header compilation bottlenecks. The orchestrator exposes a unified, chunk-by-clause `/api/tts/stream` endpoint proxy that streams raw 16-bit PCM bytes dynamically from Kokoro, Pocket, and Supertonic, ensuring instantaneous Time to First Byte (TTFB) playback.
+
+### 🎯 Robust Isolated Multi-Mode Cancellation
+Features multi-session `AbortController` tracking per chat playground and batch project. Historical playback operations (like playing or seeking cached audio cards) are fully isolated and **no longer** cancel active generation fetches or background synthesis tasks.
+
 ### 🗣️ Unified Speech Canvas (Chat Playground)
 Interactive workspace feed with real-time audio players, speed controls ($0.5\times$ to $2.0\times$), language-specific options, and seamless model hot-swapping.
 
@@ -112,6 +118,12 @@ venv\Scripts\python.exe central_server.py
 Once started, the CLI will output your local network endpoints, and the dashboard will automatically load at:
 👉 **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
 
+### 📊 Real-Time Latency Benchmarking
+To measure empirical performance, Time to First Byte (TTFB) percentiles, and Real-Time Factors (RTF) across all three local engines, run the automated benchmark script:
+```powershell
+& "venv\Scripts\python.exe" "scratch\benchmark_tts.py"
+```
+
 ---
 
 ## 🧑‍💻 Developer Integration (LAN API Example)
@@ -157,3 +169,49 @@ This creates mathematically balanced acoustic characteristics (pitch, stress, ti
 ## 🔒 Local & Sandboxed
 
 Aura works **100% offline**. All text scripts, user database profiles, and cached speech records are saved in your web browser's sandboxed **IndexedDB** database, ensuring absolute privacy. No audio is ever uploaded to external servers.
+
+---
+
+## 🤝 Open-Source Contribution Guide & Wishlist
+
+Aura TTS is built for the developer community! We welcome contributions, optimization pull requests, and features from neural speech enthusiasts. Here is our current open-source contributor wishlist:
+
+### 🌟 Active Wishlist for Contributors:
+1. **🚀 Pocket-TTS Multi-GPU Batching & Load Balancing:**
+   * Extend the `/api/tts` proxy to dispatch batch synthesis tasks across multiple local GPUs in parallel, optimizing long-form audio generation.
+2. **🎙️ Voice-Clone VAD (Voice Activity Detection) Filters:**
+   * Integrate Silero VAD into the Pocket transcode pipeline to automatically strip silence, coughs, or noise from celebrity reference files before zero-shot voice cloning.
+3. **🎭 Emotive Expression Vectors (Kokoro):**
+   * Map structural punctuation (e.g. `[excited]`, `[whispering]`, `...`) to speed and emotional scale factors to enable dramatic voice styling.
+4. **📦 Dockerized Orchestrator:**
+   * Compose a multi-container Docker configuration (`docker-compose.yml`) that spins up Kokoro, Pocket, and Supertonic with NVIDIA CUDA GPU passthroughs configured automatically.
+
+---
+
+## 🗺️ Future Planning & Roadmap
+
+We are committed to making Aura TTS the most comprehensive, localized neural speech workstation in the open-source ecosystem.
+
+* **Phase 1: Real-Time Audio Streaming (WebSocket-based):**
+  * Transition from stateless HTTP chunking to stateful WebSocket pipelines so that synthesised phonemes begin streaming instantly to the browser speakers as soon as the first word is compiled.
+* **Phase 2: RAG-Speech Integration (Local LLM Reader):**
+  * Build a local agent plugin using Ollama/Llama.cpp that lets the workstation read, summarize, and narrate your local documents off a custom knowledge base.
+* **Phase 3: Multi-Platform Mobile Companion:**
+  * Build a lightweight React Native frontend that pairs with Aura's local LAN API endpoints so you can run speech generation on your computer and play it on your phone.
+
+---
+
+## 📖 Continuation Guide (Local Learning & Deployment)
+
+Aura TTS is an outstanding playground for learning neural network deployment, audio DSP (Digital Signal Processing), and REST orchestrator design. Here is how you can use this project to learn:
+
+### 🧠 Core Concepts You Will Master:
+* **Binary Audio Splicing:** Look at `concatenate_wav_buffers` in `central_server.py` to see how raw binary buffers are modified. Learn how PCM byte offsets are read and how the 44-byte WAV header is dynamically repacked.
+* **Hardware Mutual Exclusion:** Study the sub-process termination logic in `central_server.py` to understand how heavy CUDA weights are unloaded and loaded in VRAM dynamically to prevent hardware contention.
+* **IndexedDB Architecture:** Open DevTools in your browser (`F12` -> Application -> IndexedDB) to inspect how modern client-side databases can cache megabytes of lossless binary audio arrays securely and performantly offline.
+
+### 💻 Deploying Locally for Your Team:
+1. Run Aura on your most powerful workstation: `.\run_aura_portal.bat`.
+2. Look at the startup CLI log to get your local network IP (e.g. `http://192.168.1.45:5000`).
+3. Share this address with anyone on your local Wi-Fi or LAN. They can open the dashboard in their browsers and generate high-fidelity speech instantly, sharing the server’s GPU capacity!
+

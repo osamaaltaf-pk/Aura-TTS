@@ -738,22 +738,23 @@ def generate_speech(
         # Voice cache mutation is already protected above; the generator
         # itself only reads from the cache.
         logger.info(f"Generating speech with device: {model.device}")
-        generator = model(
-            text,
-            voice=str(voice_path),
-            speed=speed,
-            split_pattern=r'\n+'
-        )
-
+        
         audio_segments = []
         phoneme_segments = []
-        for gs, ps, audio in generator:
-            if audio is not None:
-                if isinstance(audio, np.ndarray):
-                    audio = torch.from_numpy(audio).float()
-                audio_segments.append(audio)
-                if ps:
-                    phoneme_segments.append(ps)
+        with torch.inference_mode():
+            generator = model(
+                text,
+                voice=str(voice_path),
+                speed=speed,
+                split_pattern=r'\n+'
+            )
+            for gs, ps, audio in generator:
+                if audio is not None:
+                    if isinstance(audio, np.ndarray):
+                        audio = torch.from_numpy(audio).float()
+                    audio_segments.append(audio)
+                    if ps:
+                        phoneme_segments.append(ps)
 
         if audio_segments:
             return torch.cat(audio_segments, dim=0), "\n".join(phoneme_segments)
