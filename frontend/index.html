@@ -136,6 +136,115 @@
     .btn-submit-pill:active {
       transform: scale(0.95);
     }
+
+    /* Premium Timbre Card & Player UI styling */
+    .timbre-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.01);
+    }
+    
+    .dark-theme .timbre-card {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .timbre-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.03);
+      border-color: var(--accent-color);
+    }
+
+    .dark-theme .timbre-card:hover {
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.25);
+    }
+
+    .timbre-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .preview-player-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.02);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .dark-theme .preview-player-bar {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    
+    .form-row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .form-row .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    /* Premium Loading Overlay for Voice Cloning */
+    .cloning-loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      border-radius: 16px;
+      transition: all 0.3s ease;
+    }
+    .dark-theme .cloning-loading-overlay {
+      background: rgba(15, 21, 36, 0.5);
+    }
+    .spinner-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+    .premium-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px dashed var(--accent-color);
+      border-radius: 50%;
+      animation: spinPremium 1.8s linear infinite;
+    }
+    .loading-text {
+      font-family: var(--font-title);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 0.03em;
+      animation: pulseText 1.5s ease-in-out infinite;
+    }
+    @keyframes spinPremium {
+      0% { transform: rotate(0deg); border-style: dotted; }
+      50% { transform: rotate(180deg); border-style: dashed; }
+      100% { transform: rotate(360deg); border-style: dotted; }
+    }
+    @keyframes pulseText {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
   </style>
 </head>
 
@@ -380,23 +489,18 @@
           <div style="display: flex; align-items: center; gap: 12px;">
             <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary);">Config Engine:</span>
             <select class="model-pill-select" id="cloning-engine-select" onchange="triggerEngineSwitch('cloning')">
-              <option value="kokoro">kokoro</option>
               <option value="pocket">pocket</option>
               <option value="supertonic">supertonic</option>
             </select>
           </div>
         </div>
 
-        <!-- Zero-Shot Cloning Alert Overlay if Kokoro loaded -->
-        <div class="cloning-alert-screen" id="cloning-disabled-screen" style="display: none;">
-          <i>⚠️</i>
-          <h2 style="font-family: var(--font-title); font-weight: 700; font-size: 1.5rem; color: var(--text-primary);">
-            Zero-Shot Cloning Disabled</h2>
-          <p style="max-width: 480px; font-size: 0.85rem; line-height: 1.5; margin-top: 6px;">
-            Kokoro TTS uses unified static matrices that do not support Dynamic Timbre Cloning.
-            Please select **Pocket TTS** or **Supertonic** from the dropdown above to unlock zero-shot dynamic cloned
-            speakers!
-          </p>
+        <!-- Sleek premium glassmorphic loading overlay -->
+        <div class="cloning-loading-overlay" id="cloning-loading-overlay" style="display: none;">
+          <div class="spinner-container">
+            <div class="premium-spinner"></div>
+            <span class="loading-text">Loading Speech Model...</span>
+          </div>
         </div>
 
         <!-- Dynamic Cloner Grid if supported -->
@@ -491,16 +595,6 @@
 
           <!-- Helper list of Custom blended voices -->
           <div style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="cloning-card">
-              <div class="cloning-card-header" style="border: none; padding: 0; margin-bottom: 10px;">
-                <h3>Timbre Library</h3>
-                <p>Mixed and registered custom styles</p>
-              </div>
-              <div class="custom-library-scroller" id="custom-voices-list-cloning">
-                <span style="color: var(--text-disabled); font-size: 0.75rem;">No custom styles mixed yet.</span>
-              </div>
-            </div>
-
             <div class="cloning-card" id="json-profile-card"
               style="display: none; padding: 20px; text-align: center; cursor: pointer;"
               onclick="document.getElementById('json-file-picker').click()">
@@ -798,6 +892,10 @@
         });
       }
 
+      getAllVoices() {
+        return this.getVoices();
+      }
+
       saveVoice(voice) {
         return new Promise((resolve) => {
           const tx = this.db.transaction("voices", "readwrite");
@@ -894,6 +992,18 @@
         badge.innerText = `${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode`;
       }
 
+      // Update Header title dynamically
+      const titleHeader = document.getElementById('chat-title-header');
+      if (titleHeader) {
+        if (mode === 'chat') {
+          titleHeader.innerText = activeChat ? activeChat.title : "Workspace Chat";
+        } else if (mode === 'batch') {
+          titleHeader.innerText = activeBatchProject ? activeBatchProject.title : "Batch Workspace";
+        } else if (mode === 'cloning') {
+          titleHeader.innerText = activeCustomVoice ? activeCustomVoice.name + " — Speaker Timbre" : "Voice Cloning & Timbre Library";
+        }
+      }
+
       // Toggle View Displays
       const chatFeed = document.getElementById('chat-feed-screen');
       const chatSubmit = document.getElementById('chat-submit-footer');
@@ -985,6 +1095,19 @@
           searchInput.oninput = filterCustomVoices;
         }
 
+        const isKokoro = !activeBackend || activeBackend === 'kokoro';
+        if (isKokoro) {
+          const cloningSelect = document.getElementById('cloning-engine-select');
+          if (cloningSelect) {
+            cloningSelect.value = 'pocket';
+          }
+          cloningActiveModel = 'pocket';
+          triggerEngineSwitch('cloning');
+        } else {
+          fetchVoices();
+          fetchCustomClonedVoices();
+        }
+
         renderCustomVoicesList();
         syncCloningUIVisibility();
       }
@@ -1060,6 +1183,11 @@
       if (engineSel && active.engine) engineSel.value = active.engine;
       if (langSel && active.lang) langSel.value = active.lang;
 
+      if (activeAppMode === 'batch') {
+        const titleHeader = document.getElementById('chat-title-header');
+        if (titleHeader) titleHeader.innerText = active.title;
+      }
+
       // Re-trigger voices fetch based on new selection
       await fetchVoices();
 
@@ -1093,6 +1221,9 @@
             target.title = val;
             await db.saveBatchProject(target);
             titleSpan.innerText = val;
+            if (activeBatchProject && activeBatchProject.id === id && activeAppMode === 'batch') {
+              document.getElementById('chat-title-header').innerText = val;
+            }
           }
         }
         input.remove();
@@ -1160,7 +1291,14 @@
       customTitle.innerText = "Custom Speaker Timbres";
       list.appendChild(customTitle);
 
-      const customMatches = customVoices.filter(cv => !query || cv.name.toLowerCase().includes(query));
+      const currentCloningEngine = document.getElementById('cloning-engine-select') ? document.getElementById('cloning-engine-select').value : cloningActiveModel;
+      
+      let customMatches = customVoices;
+      if (activeAppMode === 'cloning') {
+        customMatches = customMatches.filter(cv => cv.engine === currentCloningEngine);
+      }
+      customMatches = customMatches.filter(cv => !query || cv.name.toLowerCase().includes(query));
+
       if (customMatches.length === 0) {
         const noVal = document.createElement('div');
         noVal.style.cssText = "font-size: 0.7rem; color: var(--text-disabled); padding: 8px 12px;";
@@ -1169,20 +1307,54 @@
       } else {
         customMatches.forEach(cv => {
           const item = document.createElement('div');
-          item.className = `chat-item ${activeCustomVoice && activeCustomVoice.id === cv.id ? 'active' : ''}`;
+          const isSelected = activeCustomVoice && activeCustomVoice.id === cv.id;
+          item.className = `chat-item cloning-timbre-item ${isSelected ? 'active' : ''}`;
           item.id = `custom-voice-item-${cv.id}`;
-          item.onclick = () => selectActiveCustomVoice(cv.id);
-          item.ondblclick = (e) => startRenameCustomVoice(cv.id, e);
+          item.style.cssText = "display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); cursor: default; transition: all 0.2s ease;";
 
           let icon = cv.type === 'mixed' ? '✨' : '🎙️';
           item.innerHTML = `
-            <div class="chat-item-details">
-              <i>${icon}</i>
-              <span class="chat-item-title">${cv.name}</span>
+            <div class="timbre-sidebar-header" onclick="selectActiveCustomVoice('${cv.id}')" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; width: 100%;">
+              <div class="chat-item-details" style="display: flex; align-items: center; gap: 8px; overflow: hidden; flex: 1;">
+                <span style="font-size: 0.9rem; flex-shrink: 0;">${icon}</span>
+                <span class="chat-item-title" style="font-weight: 600; font-size: 0.8rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">${cv.name}</span>
+              </div>
+              <div class="chat-item-actions" style="display: flex; gap: 4px; flex-shrink: 0; opacity: 1;">
+                <button class="chat-action-btn" onclick="startRenameCustomVoice('${cv.id}', event)" title="Rename voice" style="background: none; border: none; cursor: pointer; font-size: 0.75rem; padding: 2px;">✏️</button>
+                <button class="chat-action-btn delete" onclick="deleteCustomVoiceWorkspace('${cv.id}', event)" title="Delete voice" style="background: none; border: none; cursor: pointer; font-size: 0.75rem; padding: 2px; color: var(--danger);">🗑️</button>
+              </div>
             </div>
-            <div class="chat-item-actions">
-              <button class="chat-action-btn" onclick="startRenameCustomVoice('${cv.id}', event)" title="Rename voice">✏️</button>
-              <button class="chat-action-btn delete" onclick="deleteCustomVoiceWorkspace('${cv.id}', event)" title="Delete voice">🗑️</button>
+            
+            <!-- Inline Synth Text & Button -->
+            <div style="display: flex; gap: 6px; width: 100%; margin-top: 2px;" onclick="event.stopPropagation()">
+              <input type="text" id="preview-text-${cv.id}" class="form-control" 
+                style="font-size: 0.7rem; height: 26px; flex: 1; border-radius: 6px; padding: 4px 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);" 
+                placeholder="Preview text..." 
+                value="${cv.testText || 'Testing my new custom voice prompt offline.'}" 
+                oninput="updateCachedText('${cv.id}', this.value)">
+              <button class="new-chat-btn" id="synth-btn-${cv.id}" onclick="synthesizeTimbreTest('${cv.id}')" 
+                style="height: 26px; font-size: 0.7rem; background: var(--dot-green); color: #000; font-weight: 700; padding: 0 8px; border-radius: 6px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 2px; flex-shrink: 0;">
+                Synth
+              </button>
+            </div>
+
+            <!-- Inline Player Deck -->
+            <div id="preview-player-${cv.id}" class="preview-player-bar" 
+              style="display: ${cv.testAudio ? 'flex' : 'none'}; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,0.02); border: 1px solid var(--border-color); margin-top: 2px; width: 100%; box-sizing: border-box;" onclick="event.stopPropagation()">
+              <button class="mini-play-btn" id="preview-play-btn-${cv.id}" onclick="playTimbreTestAudio('${cv.id}')" 
+                style="width: 22px; height: 22px; border-radius: 50%; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; background: var(--accent-color); color: var(--bg-card); border: none; cursor: pointer; flex-shrink: 0; padding: 0; line-height: 1;">▶</button>
+              
+              <div class="mini-timeline-track" style="flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+                <div class="mini-timeline" onclick="seekPreviewAudio('${cv.id}', event)" style="height: 3px; background: rgba(0,0,0,0.08); border-radius: 1.5px; cursor: pointer; position: relative; width: 100%;">
+                  <div class="mini-timeline-fill" id="preview-fill-${cv.id}" style="width: 0%; height: 100%; background: var(--accent-color); border-radius: 1.5px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.55rem; color: var(--text-disabled); width: 100%;">
+                  <span id="preview-current-time-${cv.id}">0:00</span>
+                  <span id="preview-duration-time-${cv.id}">0:00</span>
+                </div>
+              </div>
+              
+              <button class="mini-action-icon" onclick="downloadPreviewAudio('${cv.id}')" title="Download Audio" style="background: none; border: none; cursor: pointer; font-size: 0.75rem; padding: 2px; flex-shrink: 0; line-height: 1;">📥</button>
             </div>
           `;
           list.appendChild(item);
@@ -1208,21 +1380,29 @@
           item.className = `chat-item`;
           item.style.cssText = "cursor: pointer; padding: 6px 10px; font-size: 0.8rem; opacity: 0.85;";
           item.onclick = () => {
-            // Fill into forms for quick cloning/mixing base reference!
-            const mixA = document.getElementById('mix-voice-a');
-            const mixB = document.getElementById('mix-voice-b');
-            if (mixA) mixA.value = v.id;
-            showToast(`Selected base speaker reference: ${v.name}`, 'info');
+            setMixVoice(v.id, 'A');
           };
           item.innerHTML = `
-            <div class="chat-item-details" style="gap: 8px;">
-              <span style="font-size:0.75rem;">🗣️</span>
-              <span class="chat-item-title">${v.name} (${v.gender.charAt(0).toUpperCase()})</span>
+            <div class="chat-item-details" style="gap: 8px; flex: 1; min-width: 0;">
+              <span style="font-size:0.75rem; flex-shrink: 0;">🗣️</span>
+              <span class="chat-item-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${v.name} (${v.gender.charAt(0).toUpperCase()})</span>
             </div>
-            <div style="font-size: 0.65rem; color: var(--text-disabled); font-weight: 700; text-transform: uppercase; background: rgba(255,255,255,0.05); padding: 2px 5px; border-radius: 4px;">Preset</div>
+            <div class="chat-item-actions" style="display: flex; gap: 4px; flex-shrink: 0; margin-left: auto;">
+              <button class="chat-action-btn" onclick="setMixVoice('${v.id}', 'A', event)" title="Use as Voice A" style="font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02); font-weight: bold; color: var(--text-secondary);">A</button>
+              <button class="chat-action-btn" onclick="setMixVoice('${v.id}', 'B', event)" title="Use as Voice B" style="font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02); font-weight: bold; color: var(--text-secondary);">B</button>
+            </div>
           `;
           list.appendChild(item);
         });
+      }
+    }
+
+    function setMixVoice(id, slot, event) {
+      if (event) event.stopPropagation();
+      const select = document.getElementById(slot === 'A' ? 'mix-voice-a' : 'mix-voice-b');
+      if (select) {
+        select.value = id;
+        showToast(`Set Voice ${slot} to: ${id}`, 'info');
       }
     }
 
@@ -1255,6 +1435,11 @@
         }
       }
 
+      if (activeAppMode === 'cloning') {
+        const titleHeader = document.getElementById('chat-title-header');
+        if (titleHeader) titleHeader.innerText = active.name + " — Speaker Timbre";
+      }
+
       showToast(`Selected Registered Voice Style: ${active.name}`, 'info');
     }
 
@@ -1284,6 +1469,9 @@
             target.name = val;
             await db.saveVoice(target);
             titleSpan.innerText = val;
+            if (activeCustomVoice && activeCustomVoice.id === id && activeAppMode === 'cloning') {
+              document.getElementById('chat-title-header').innerText = val + " — Speaker Timbre";
+            }
           }
         }
         input.remove();
@@ -1305,6 +1493,9 @@
 
       if (!confirm("Are you sure you want to permanently delete this custom speaker timbre?")) return;
 
+      // Cleanly stop active timbre preview playback
+      stopTimbrePreviewAudio();
+
       customVoices = customVoices.filter(cv => cv.id !== id);
       await db.deleteVoice(id);
 
@@ -1318,6 +1509,7 @@
       }
 
       renderCustomVoicesList();
+      renderCloningTimbreLibrary();
       showToast("Custom speaker timbre deleted", "info");
     }
 
@@ -1747,6 +1939,11 @@
 
       showToast(`Loading speech engine ${targetEngine.toUpperCase()} locally offline...`, 'info');
 
+      const loadingOverlay = document.getElementById('cloning-loading-overlay');
+      if (loadingOverlay && (activeAppMode === 'cloning' || originMode === 'cloning')) {
+        loadingOverlay.style.display = 'flex';
+      }
+
       try {
         const response = await fetch('/api/switch', {
           method: 'POST',
@@ -1765,6 +1962,11 @@
             activeChat.engine = targetEngine;
             await db.saveChat(activeChat);
           }
+
+          // Fetch updated engine voices and DB styles
+          await fetchVoices();
+          await fetchCustomClonedVoices();
+          renderCustomVoicesList();
         } else {
           const err = await response.json();
           showToast(`Failed loading engine: ${err.detail}`, 'error');
@@ -1772,6 +1974,9 @@
       } catch (err) {
         showToast('Server connection timeout during engine loading', 'error');
       } finally {
+        if (loadingOverlay) {
+          loadingOverlay.style.display = 'none';
+        }
         await checkStatus();
       }
     }
@@ -2696,6 +2901,9 @@
         activePlayAudio = null;
         activePlayAudioId = null;
       }
+
+      // Stop any custom timbre library audio previews
+      stopTimbrePreviewAudio();
     }
 
     function downloadHistoryAudio(id) {
@@ -3214,24 +3422,30 @@
       const supertonicCard = document.getElementById('cloning-supertonic-card');
       const jsonProfile = document.getElementById('json-profile-card');
 
-      if (!activeBackend || activeBackend === 'kokoro') {
-        disabledScreen.style.display = 'flex';
-        activeGrid.style.display = 'none';
-      } else {
-        disabledScreen.style.display = 'none';
-        activeGrid.style.display = 'grid';
-
-        if (activeBackend === 'pocket') {
-          pocketCard.style.display = 'block';
-          supertonicCard.style.display = 'none';
-          jsonProfile.style.display = 'none';
-        } else if (activeBackend === 'supertonic') {
-          pocketCard.style.display = 'none';
-          supertonicCard.style.display = 'block';
-          jsonProfile.style.display = 'block';
-          fetchCustomClonedVoices();
+      if (disabledScreen) {
+        if (!activeBackend || activeBackend === 'kokoro') {
+          disabledScreen.style.display = 'flex';
+          if (activeGrid) activeGrid.style.display = 'none';
+          return;
+        } else {
+          disabledScreen.style.display = 'none';
         }
       }
+
+      if (activeGrid) activeGrid.style.display = 'grid';
+
+      const currentCloningEngine = (activeBackend && activeBackend !== 'kokoro') ? activeBackend : cloningActiveModel;
+
+      if (currentCloningEngine === 'pocket') {
+        if (pocketCard) pocketCard.style.display = 'block';
+        if (supertonicCard) supertonicCard.style.display = 'none';
+        if (jsonProfile) jsonProfile.style.display = 'none';
+      } else if (currentCloningEngine === 'supertonic') {
+        if (pocketCard) pocketCard.style.display = 'none';
+        if (supertonicCard) supertonicCard.style.display = 'block';
+        if (jsonProfile) jsonProfile.style.display = 'block';
+      }
+      fetchCustomClonedVoices();
     }
 
     let selectedCloningAudioFile = null;
@@ -3284,14 +3498,21 @@
     }
 
     async function uploadVoiceCloningPrompt() {
-      const name = document.getElementById('clone-speaker-name').value.trim();
+      const rawName = document.getElementById('clone-speaker-name').value.trim();
       const lang = document.getElementById('clone-speaker-lang').value;
       if (!selectedCloningAudioFile) {
         showToast("Please drag & drop your speaker reference audio first!", "error");
         return;
       }
-      if (!name) {
+      if (!rawName) {
         showToast("Please enter a custom speaker name!", "error");
+        return;
+      }
+
+      // Sanitize the voice name exactly how the backend does to prevent duplicate voice card bugs
+      const name = Array.from(rawName).filter(c => /^[a-zA-Z0-9_-]$/.test(c)).join('').trim();
+      if (!name) {
+        showToast("Name must contain only alphanumeric characters, dashes, or underscores.", "error");
         return;
       }
 
@@ -3316,6 +3537,19 @@
           document.getElementById('cloning-drag-text').innerText = "Drop reference audio (MP3, WAV, OGG)";
           document.getElementById('clone-speaker-name').value = '';
 
+          // Save voice to IndexedDB on success
+          const newVoiceObj = {
+            id: `voice-${Date.now()}`,
+            name: name,
+            type: 'cloned',
+            engine: 'pocket',
+            language: lang
+          };
+          customVoices.push(newVoiceObj);
+          await db.saveVoice(newVoiceObj);
+
+          renderCustomVoicesList();
+          renderCloningTimbreLibrary();
           fetchVoices();
         } else {
           const err = await response.json();
@@ -3363,10 +3597,17 @@
       const voiceA = document.getElementById('mix-voice-a').value;
       const voiceB = document.getElementById('mix-voice-b').value;
       const weight = parseFloat(document.getElementById('mix-ratio-slider').value) / 100.0;
-      const name = document.getElementById('mix-voice-name').value.trim();
+      const rawName = document.getElementById('mix-voice-name').value.trim();
 
-      if (!name) {
+      if (!rawName) {
         showToast('Please enter a name for the blended speaker timbre!', 'error');
+        return;
+      }
+
+      // Sanitize the voice name exactly how the backend does to prevent duplicate voice card bugs
+      const name = Array.from(rawName).filter(c => /^[a-zA-Z0-9_-]$/.test(c)).join('').trim();
+      if (!name) {
+        showToast('Name must contain only alphanumeric characters, dashes, or underscores.', 'error');
         return;
       }
 
@@ -3410,24 +3651,218 @@
 
     async function fetchCustomClonedVoices() {
       try {
-        const response = await fetch('/api/supertonic/custom-voices');
-        const data = await response.json();
-        const scroller = document.getElementById('custom-voices-list-cloning');
-        scroller.innerHTML = '';
+        customVoices = await db.getVoices();
 
-        if (data.custom_voices && data.custom_voices.length > 0) {
-          data.custom_voices.forEach(voice => {
-            const badge = document.createElement('span');
-            badge.className = 'custom-voice-badge';
-            badge.innerText = voice;
-            scroller.appendChild(badge);
-          });
-        } else {
-          scroller.innerHTML = '<span style="color: var(--text-disabled); font-size: 0.75rem;">No custom styles mixed yet.</span>';
+        if (activeBackend === 'supertonic') {
+          try {
+            const response = await fetch('/api/supertonic/custom-voices');
+            const data = await response.json();
+            if (data.custom_voices && data.custom_voices.length > 0) {
+              for (const sv of data.custom_voices) {
+                const exists = customVoices.some(v => v.name === sv && v.engine === 'supertonic');
+                if (!exists) {
+                  const newVoice = {
+                    id: `voice-sync-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                    name: sv,
+                    type: 'cloned',
+                    engine: 'supertonic'
+                  };
+                  customVoices.push(newVoice);
+                  await db.saveVoice(newVoice);
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Failed syncing with Supertonic server voices:", e);
+          }
         }
+
+        renderCustomVoicesList();
+        renderCloningTimbreLibrary();
       } catch (err) {
-        console.error(err);
+        console.error("fetchCustomClonedVoices failed:", err);
       }
+    }
+
+    function renderCloningTimbreLibrary() {
+      // Empty stub to avoid javascript reference errors since right-side card is deleted
+    }
+
+    async function updateCachedText(id, text) {
+      const voice = customVoices.find(v => v.id === id);
+      if (voice) {
+        voice.testText = text;
+        await db.saveVoice(voice);
+      }
+    }
+
+    async function synthesizeTimbreTest(id) {
+      const voice = customVoices.find(v => v.id === id);
+      if (!voice) return;
+
+      if (activeBackend !== voice.engine) {
+        showToast(`Synthesis failed! Please select and load the '${voice.engine.toUpperCase()}' engine at the top first.`, 'error');
+        return;
+      }
+
+      const input = document.getElementById(`preview-text-${id}`);
+      const text = input ? input.value.trim() : 'Testing my new custom voice prompt offline.';
+      if (!text) {
+        showToast("Please enter some text to preview!", "error");
+        return;
+      }
+
+      const btn = document.getElementById(`synth-btn-${id}`);
+      const originalText = btn.innerText;
+      btn.innerText = "⏳";
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: text,
+            voice: voice.name,
+            speed: 1.0,
+            lang: voice.language || 'en',
+            format: 'wav'
+          })
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          
+          // Convert blob to base64 WAV data URI
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          // Cache in IndexedDB
+          voice.testAudio = base64;
+          voice.testText = text;
+          await db.saveVoice(voice);
+
+          // Update library UI
+          renderCustomVoicesList();
+          renderCloningTimbreLibrary();
+          showToast(`Preview synthesized for '${voice.name}'!`, 'success');
+
+          // Instantly start playback
+          playTimbreTestAudio(id);
+        } else {
+          const err = await response.json();
+          showToast(`Preview synthesis failed: ${err.detail || 'unknown error'}`, 'error');
+        }
+      } catch (e) {
+        console.error("Preview synthesis failed:", e);
+        showToast("Preview synthesis timed out or failed.", "error");
+      } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    let activePreviewAudio = null;
+    let activePreviewVoiceId = null;
+
+    function playTimbreTestAudio(id) {
+      const voice = customVoices.find(v => v.id === id);
+      if (!voice || !voice.testAudio) return;
+
+      const btn = document.getElementById(`preview-play-btn-${id}`);
+      const fill = document.getElementById(`preview-fill-${id}`);
+      const currentSpan = document.getElementById(`preview-current-time-${id}`);
+      const durationSpan = document.getElementById(`preview-duration-time-${id}`);
+
+      if (activePreviewAudio && activePreviewVoiceId === id) {
+        if (activePreviewAudio.paused) {
+          activePreviewAudio.play();
+          if (btn) btn.innerText = "❚❚";
+        } else {
+          activePreviewAudio.pause();
+          if (btn) btn.innerText = "▶";
+        }
+        return;
+      }
+
+      // Stop any other running audio
+      stopCardPlaybacks();
+      stopTimbrePreviewAudio();
+
+      activePreviewAudio = new Audio(voice.testAudio);
+      activePreviewVoiceId = id;
+      if (btn) btn.innerText = "❚❚";
+
+      activePreviewAudio.play().catch(e => console.warn(e));
+
+      activePreviewAudio.onloadedmetadata = () => {
+        if (!activePreviewAudio) return;
+        if (durationSpan) durationSpan.innerText = formatTime(activePreviewAudio.duration);
+      };
+
+      activePreviewAudio.ontimeupdate = () => {
+        if (!activePreviewAudio || activePreviewVoiceId !== id) return;
+        const ratio = activePreviewAudio.currentTime / activePreviewAudio.duration;
+        if (fill) fill.style.width = `${ratio * 100}%`;
+        if (currentSpan) currentSpan.innerText = formatTime(activePreviewAudio.currentTime);
+      };
+
+      activePreviewAudio.onended = () => {
+        if (btn) btn.innerText = "▶";
+        if (fill) fill.style.width = "0%";
+        if (currentSpan) currentSpan.innerText = "0:00";
+        activePreviewAudio = null;
+        activePreviewVoiceId = null;
+      };
+
+      activePreviewAudio.onerror = (e) => {
+        console.error("Preview audio playback failed:", e);
+        if (btn) btn.innerText = "▶";
+        activePreviewAudio = null;
+        activePreviewVoiceId = null;
+      };
+    }
+
+    function stopTimbrePreviewAudio() {
+      if (activePreviewAudio) {
+        try {
+          activePreviewAudio.pause();
+        } catch(e) {}
+        const oldBtn = document.getElementById(`preview-play-btn-${activePreviewVoiceId}`);
+        const oldFill = document.getElementById(`preview-fill-${activePreviewVoiceId}`);
+        const oldCurrent = document.getElementById(`preview-current-time-${activePreviewVoiceId}`);
+        if (oldBtn) oldBtn.innerText = "▶";
+        if (oldFill) oldFill.style.width = "0%";
+        if (oldCurrent) oldCurrent.innerText = "0:00";
+        activePreviewAudio = null;
+        activePreviewVoiceId = null;
+      }
+    }
+
+    function seekPreviewAudio(id, event) {
+      if (activePreviewAudio && activePreviewVoiceId === id) {
+        const timeline = event.currentTarget;
+        const rect = timeline.getBoundingClientRect();
+        const percent = (event.clientX - rect.left) / rect.width;
+        activePreviewAudio.currentTime = percent * activePreviewAudio.duration;
+      }
+    }
+
+    function downloadPreviewAudio(id) {
+      const voice = customVoices.find(v => v.id === id);
+      if (!voice || !voice.testAudio) return;
+
+      const link = document.createElement('a');
+      link.href = voice.testAudio;
+      link.download = `preview_${voice.name.toLowerCase().replace(/ /g, "_")}.wav`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Downloaded preview audio", "success");
     }
 
     async function uploadVoiceProfile(event) {

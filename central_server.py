@@ -94,9 +94,23 @@ def kill_process_on_port(port: int):
         time.sleep(1.5)  # Give system time to release the port
 
 def is_port_in_use(port: int) -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(0.5)
-        return s.connect_ex(('127.0.0.1', port)) == 0
+    # Try IPv4 localhost
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.3)
+            if s.connect_ex(('127.0.0.1', port)) == 0:
+                return True
+    except Exception:
+        pass
+    # Try IPv6 localhost
+    try:
+        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as s:
+            s.settimeout(0.3)
+            if s.connect_ex(('::1', port)) == 0:
+                return True
+    except Exception:
+        pass
+    return False
 
 def wait_for_port(port: int, timeout: int = 30) -> bool:
     start_time = time.time()
@@ -133,12 +147,16 @@ def get_status():
     
     global active_backend
     # Recalculate active backend based on actual port status
-    detected_active = None
-    for backend, info in status.items():
-        if info["running"]:
-            detected_active = backend
-            break
-    active_backend = detected_active
+    if active_backend and status.get(active_backend, {}).get("running"):
+        # Keep current active_backend if it is running
+        pass
+    else:
+        detected_active = None
+        for backend, info in status.items():
+            if info["running"]:
+                detected_active = backend
+                break
+        active_backend = detected_active
     
     return {
         "active_backend": active_backend,
