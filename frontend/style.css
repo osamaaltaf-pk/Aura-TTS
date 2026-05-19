@@ -999,6 +999,7 @@ body {
 
 /* ==================== CLONING MODE WORKSPACE ==================== */
 .cloning-workspace {
+  position: relative;
   flex-grow: 1;
   padding: 30px 24px;
   overflow-y: auto;
