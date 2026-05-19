@@ -920,7 +920,13 @@
         }
 
         renderChatsList();
-        if (activeChat) {
+
+        // If we are returning to the ALREADY active chat, we DO NOT select or redraw it.
+        // This completely preserves the active live real-time generating player DOM and state!
+        const chatListActiveItem = document.querySelector('.chat-item.active');
+        if (activeChat && chatListActiveItem) {
+          scrollToBottom();
+        } else if (activeChat) {
           selectActiveChat(activeChat.id);
         } else {
           renderChatMessages();
@@ -930,7 +936,15 @@
         if (chatSubmit) chatSubmit.style.display = 'none';
         if (batchScreen) batchScreen.classList.add('active');
         if (cloningScreen) cloningScreen.classList.remove('active');
-        stopCardPlaybacks();
+
+        // Pause active history audio playback, but NEVER cancel speech synthesis!
+        if (activePlayAudio) {
+          activePlayAudio.pause();
+          const oldBtn = document.getElementById(`play-btn-${activePlayAudioId}`);
+          if (oldBtn) oldBtn.innerText = "▶";
+          activePlayAudio = null;
+          activePlayAudioId = null;
+        }
 
         if (sidebarBtn) {
           sidebarBtn.innerHTML = '<i>📦</i> New Project';
@@ -952,7 +966,15 @@
         if (chatSubmit) chatSubmit.style.display = 'none';
         if (batchScreen) batchScreen.classList.remove('active');
         if (cloningScreen) cloningScreen.classList.add('active');
-        stopCardPlaybacks();
+
+        // Pause active history audio playback, but NEVER cancel speech synthesis!
+        if (activePlayAudio) {
+          activePlayAudio.pause();
+          const oldBtn = document.getElementById(`play-btn-${activePlayAudioId}`);
+          if (oldBtn) oldBtn.innerText = "▶";
+          activePlayAudio = null;
+          activePlayAudioId = null;
+        }
 
         if (sidebarBtn) {
           sidebarBtn.innerHTML = '<i>🎙️</i> New Custom Voice';
@@ -1427,7 +1449,9 @@
 
     // Load active Chat and populate fields
     async function selectActiveChat(id) {
-      stopCardPlaybacks();
+      if (!activeChat || activeChat.id !== id) {
+        stopCardPlaybacks();
+      }
 
       const active = chats.find(c => c.id === id);
       if (!active) return;
@@ -1732,7 +1756,7 @@
 
         if (response.ok) {
           showToast(`Engine ${targetEngine.toUpperCase()} loaded and ready!`, 'success');
-          
+
           // Set activeBackend immediately to prevent race conditions during checks
           activeBackend = targetEngine;
 
@@ -1808,6 +1832,7 @@
     let activeStreamVoice = null;
     let activeStreamLang = null;
     let activeStreamFormat = null;
+    let activeStreamResolvers = {}; // Dynamic chunk arrival callbacks to bypass browser background tab throttling
 
     function playSentenceBlob(blob) {
       return new Promise((resolve) => {
@@ -1887,9 +1912,11 @@
 
       // Find the chunk in playQueue
       let item = playQueue.find(x => x.index === index);
-      while (!item && isGeneratingSpeech && activeStreamAudioId === audioId) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-        item = playQueue.find(x => x.index === index);
+      if (!item && isGeneratingSpeech && activeStreamAudioId === audioId) {
+        // Wait for the chunk using event-driven promise resolver to bypass browser background tab throttling
+        item = await new Promise(resolve => {
+          activeStreamResolvers[index] = resolve;
+        });
       }
 
       if (!isGeneratingSpeech || activeStreamAudioId !== audioId) return;
@@ -1944,13 +1971,13 @@
           console.warn("Audio play interrupted or failed:", err);
         });
         if (btn) btn.innerText = "❚❚";
-        
+
         // Ensure wave animation is running
         const waveContainer = document.getElementById(`wave-gen-${audioId}`);
         if (waveContainer) waveContainer.classList.add('generating');
       } else {
         if (btn) btn.innerText = "▶";
-        
+
         // Pause wave animation
         const waveContainer = document.getElementById(`wave-gen-${audioId}`);
         if (waveContainer) waveContainer.classList.remove('generating');
@@ -2057,7 +2084,8 @@
         }
 
         const blob = await response.blob();
-        playQueue.push({ index: currentIdx, blob, text: sentenceText });
+        const queueItem = { index: currentIdx, blob, text: sentenceText };
+        playQueue.push(queueItem);
 
         // Update real-time chunk visual progress counter
         if (activeStreamAudioId !== null) {
@@ -2067,6 +2095,13 @@
           }
         }
 
+        // Instantly resolve player waiting for this chunk (bypasses background tab lag)
+        if (activeStreamResolvers[currentIdx]) {
+          const resolveFn = activeStreamResolvers[currentIdx];
+          delete activeStreamResolvers[currentIdx];
+          resolveFn(queueItem);
+        }
+
         // Auto-fetch next sentence in parallel immediately!
         fetchNextSentence(cleanSentences, voice, lang, format);
       } catch (err) {
@@ -2074,7 +2109,15 @@
           console.error(`Sentence ${currentIdx} fetch failed:`, err);
           // Insert empty buffer as fallback to prevent blocking play queue
           const emptyWav = new Uint8Array(44);
-          playQueue.push({ index: currentIdx, blob: new Blob([emptyWav], { type: 'audio/wav' }), text: "" });
+          const queueItem = { index: currentIdx, blob: new Blob([emptyWav], { type: 'audio/wav' }), text: "" };
+          playQueue.push(queueItem);
+
+          if (activeStreamResolvers[currentIdx]) {
+            const resolveFn = activeStreamResolvers[currentIdx];
+            delete activeStreamResolvers[currentIdx];
+            resolveFn(queueItem);
+          }
+
           fetchNextSentence(cleanSentences, voice, lang, format);
         }
       }
@@ -2102,6 +2145,7 @@
       activeStreamVoice = null;
       activeStreamLang = null;
       activeStreamFormat = null;
+      activeStreamResolvers = {};
 
       if (currentAudioSource) {
         try {
@@ -2284,7 +2328,7 @@
 
       // Kickoff first sentence and pre-fetches in background
       fetchNextSentence(cleanSentences, voice, lang, format);
-      
+
       // Start streaming playback at index 0 immediately!
       playStreamChunk(0);
     }
@@ -2515,7 +2559,7 @@
             activeStreamAudioElement.pause();
           }
           if (btn) btn.innerText = "▶";
-          
+
           // Pause wave animation
           const waveContainer = document.getElementById(`wave-gen-${id}`);
           if (waveContainer) waveContainer.classList.remove('generating');
@@ -2525,7 +2569,7 @@
             activeStreamAudioElement.play().catch(e => console.warn(e));
           }
           if (btn) btn.innerText = "❚❚";
-          
+
           // Play wave animation
           const waveContainer = document.getElementById(`wave-gen-${id}`);
           if (waveContainer) waveContainer.classList.add('generating');
